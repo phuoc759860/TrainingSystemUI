@@ -11,3 +11,9 @@ export const createUser = async (data) => {
 export const getUser = async (id) => {
     return await api.get(`/users/${id}`);
 };
+
+export const updateUser = async (id, data) =>
+    await api.put(`/users/${id}`, data);
+
+export const deleteUser = async (id) =>
+    await api.delete(`/users/${id}`);

@@ -1,6 +1,11 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { getUsers, createUser } from "../services/userService";
+import {
+    getUsers,
+    createUser,
+    updateUser,
+    deleteUser
+} from "../services/userService";
 import { getRoles } from "../services/roleService";
 
 function User() {
@@ -8,6 +13,8 @@ function User() {
     const navigate = useNavigate();
 
     const [users, setUsers] = useState([]);
+    const [editingId, setEditingId] = useState(null);
+
     const [roles, setRoles] = useState([]);
 
     const [form, setForm] = useState({
@@ -52,16 +59,66 @@ function User() {
 
     const handleSubmit = async () => {
 
-        await createUser(form);
+        try {
 
-        alert("User created.");
+            if (editingId == null) {
+
+                await createUser(form);
+
+                alert("User created.");
+
+            }
+            else {
+
+                await updateUser(editingId, form);
+
+                alert("User updated.");
+
+                setEditingId(null);
+
+            }
+
+            setForm({
+                name: "",
+                email: "",
+                password: "",
+                roleID: ""
+            });
+
+            loadUsers();
+
+        }
+        catch (err) {
+
+            console.log(err);
+
+            alert("Operation failed.");
+
+        }
+
+    };
+
+    const handleEdit = (user) => {
+
+        setEditingId(user.userID);
 
         setForm({
-            name: "",
-            email: "",
+
+            name: user.name,
+            email: user.email,
             password: "",
-            roleID: ""
+            roleID: user.roleID
+
         });
+
+    };
+
+    const handleDelete = async (id) => {
+
+        if (!window.confirm("Delete this user?"))
+            return;
+
+        await deleteUser(id);
 
         loadUsers();
 
@@ -154,6 +211,8 @@ function User() {
 
                         <th>Role</th>
 
+                        <th>Actions</th>
+
                     </tr>
 
                 </thead>
@@ -172,6 +231,24 @@ function User() {
                                 <td>{user.email}</td>
 
                                 <td>{user.roleName}</td>
+
+                                <td>
+
+                                    <button
+                                        onClick={() => handleEdit(user)}
+                                    >
+                                        Edit
+                                    </button>
+
+                                    {" "}
+
+                                    <button
+                                        onClick={() => handleDelete(user.userID)}
+                                    >
+                                        Delete
+                                    </button>
+
+                                </td>
 
                             </tr>
 
