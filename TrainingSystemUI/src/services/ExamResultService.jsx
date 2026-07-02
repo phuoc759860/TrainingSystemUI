@@ -1,0 +1,16 @@
+import api from "../api/axios";
+
+export const getExamResults = async () =>
+    await api.get("/ExamResult");
+
+export const getExamResult = async (id) =>
+    await api.get(`/ExamResult/${id}`);
+
+export const createExamResult = async (data) =>
+    await api.post("/ExamResult", data);
+
+export const updateExamResult = async (id, data) =>
+    await api.put(`/ExamResult/${id}`, data);
+
+export const deleteExamResult = async (id) =>
+    await api.delete(`/ExamResult/${id}`);

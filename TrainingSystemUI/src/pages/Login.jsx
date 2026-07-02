@@ -20,8 +20,9 @@ function Login() {
                 password
             });
 
-            localStorage.setItem("user", JSON.stringify(result));
-
+            console.log(result);
+            localStorage.setItem("token", result.token);
+            localStorage.setItem("roleID", result.roleID);
             alert("Login successful!");
 
             navigate("/dashboard");

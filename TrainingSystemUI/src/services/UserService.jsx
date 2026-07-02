@@ -17,3 +17,7 @@ export const updateUser = async (id, data) =>
 
 export const deleteUser = async (id) =>
     await api.delete(`/users/${id}`);
+
+export const getTrainers = async () => {
+    return await api.get("/users/trainers");
+};

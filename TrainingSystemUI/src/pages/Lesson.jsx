@@ -1,46 +1,46 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { getUsers } from "../services/userService";
 
 import {
-    getCourses,
-    createCourse,
-    updateCourse,
-    deleteCourse
-} from "../services/CourseService";
+    getLessons,
+    createLesson,
+    updateLesson,
+    deleteLesson
+} from "../services/lessonService";
 
-function Course() {
+import { getCourses } from "../services/courseService";
+
+function Lesson() {
 
     const navigate = useNavigate();
+
+    const [lessons, setLessons] = useState([]);
 
     const [courses, setCourses] = useState([]);
 
     const [editingId, setEditingId] = useState(null);
 
-    const [trainers, setTrainers] = useState([]);
-
     const [form, setForm] = useState({
         title: "",
         description: "",
-        trainerID: ""
+        courseID: ""
     });
 
     useEffect(() => {
+
+        loadLessons();
+
         loadCourses();
-        loadTrainers();
+
     }, []);
 
-    const loadTrainers = async () => {
+    const loadLessons = async () => {
 
-        const res = await getUsers();
+        const res = await getLessons();
 
-        const trainerList = res.data.filter(
-            u => u.roleName === "Trainer"
-        );
+        setLessons(res.data);
 
-        setTrainers(trainerList);
-
-    };  
+    };
 
     const loadCourses = async () => {
 
@@ -68,16 +68,17 @@ function Course() {
 
             if (editingId == null) {
 
-                await createCourse(form);
+                await createLesson(form);
 
-                alert("Course created.");
+                alert("Lesson created.");
 
             }
+
             else {
 
-                await updateCourse(editingId, form);
+                await updateLesson(editingId, form);
 
-                alert("Course updated.");
+                alert("Lesson updated.");
 
                 setEditingId(null);
 
@@ -88,15 +89,18 @@ function Course() {
                 title: "",
 
                 description: "",
-                
-                trainerID: ""
+
+                courseID: ""
 
             });
 
-            loadCourses();
+            loadLessons();
 
         }
-        catch {
+
+        catch (err) {
+
+            console.log(err);
 
             alert("Operation failed.");
 
@@ -104,17 +108,17 @@ function Course() {
 
     };
 
-    const handleEdit = (course) => {
+    const handleEdit = (lesson) => {
 
-        setEditingId(course.courseID);
+        setEditingId(lesson.lessonID);
 
         setForm({
 
-            title: course.title,
+            title: lesson.title,
 
-            description: course.description,
+            description: lesson.description,
 
-            trainerID: course.trainerID
+            courseID: lesson.courseID
 
         });
 
@@ -122,12 +126,13 @@ function Course() {
 
     const handleDelete = async (id) => {
 
-        if (!window.confirm("Delete this course?"))
+        if (!window.confirm("Delete this lesson?"))
+
             return;
 
-        await deleteCourse(id);
+        await deleteLesson(id);
 
-        loadCourses();
+        loadLessons();
 
     };
 
@@ -135,11 +140,13 @@ function Course() {
 
         <div style={{ padding: "30px" }}>
 
-            <button onClick={() => navigate("/dashboard")}>
+            <button
+                onClick={() => navigate("/dashboard")}
+            >
                 ← Back
             </button>
 
-            <h2>Course Management</h2>
+            <h2>Lesson Management</h2>
 
             <hr />
 
@@ -147,7 +154,7 @@ function Course() {
 
                 name="title"
 
-                placeholder="Course Title"
+                placeholder="Lesson Title"
 
                 value={form.title}
 
@@ -161,39 +168,71 @@ function Course() {
 
                 name="description"
 
-                placeholder="Description"
-
                 rows="4"
 
                 cols="40"
+
+                placeholder="Description"
 
                 value={form.description}
 
                 onChange={handleChange}
 
             />
-            <br /><br />
-            
-            <select
-                name="trainerID"
-                value={form.trainerID}
-                onChange={handleChange}
-            >
-                <option value="">Select Trainer</option>
 
-                {trainers.map(trainer => (
-                    <option
-                        key={trainer.userID}
-                        value={trainer.userID}
-                    >
-                        {trainer.name}
-                    </option>
-                ))}
+            <br /><br />
+
+            <select
+
+                name="courseID"
+
+                value={form.courseID}
+
+                onChange={handleChange}
+
+            >
+
+                <option value="">
+                    Select Course
+                </option>
+
+                {
+
+                    courses.map(course => (
+
+                        <option
+
+                            key={course.courseID}
+
+                            value={course.courseID}
+
+                        >
+
+                            {course.title}
+
+                        </option>
+
+                    ))
+
+                }
+
             </select>
 
-            <button onClick={handleSubmit}>
+            <br /><br />
 
-                {editingId == null ? "Add Course" : "Update Course"}
+            <button
+                onClick={handleSubmit}
+            >
+
+                {
+
+                    editingId == null
+
+                        ? "Add Lesson"
+
+                        : "Update Lesson"
+
+                }
 
             </button>
 
@@ -211,7 +250,7 @@ function Course() {
 
                         <th>Description</th>
 
-                        <th>Trainer</th>
+                        <th>Course</th>
 
                         <th>Actions</th>
 
@@ -223,22 +262,22 @@ function Course() {
 
                     {
 
-                        courses.map(course => (
+                        lessons.map(lesson => (
 
-                            <tr key={course.courseID}>
+                            <tr key={lesson.lessonID}>
 
-                                <td>{course.courseID}</td>
+                                <td>{lesson.lessonID}</td>
 
-                                <td>{course.title}</td>
+                                <td>{lesson.title}</td>
 
-                                <td>{course.description}</td>
+                                <td>{lesson.description}</td>
 
-                                <td>{course.trainerName}</td>
+                                <td>{lesson.courseTitle}</td>
 
                                 <td>
 
                                     <button
-                                        onClick={() => handleEdit(course)}
+                                        onClick={() => handleEdit(lesson)}
                                     >
                                         Edit
                                     </button>
@@ -246,7 +285,7 @@ function Course() {
                                     {" "}
 
                                     <button
-                                        onClick={() => handleDelete(course.courseID)}
+                                        onClick={() => handleDelete(lesson.lessonID)}
                                     >
                                         Delete
                                     </button>
@@ -269,4 +308,4 @@ function Course() {
 
 }
 
-export default Course;
+export default Lesson;

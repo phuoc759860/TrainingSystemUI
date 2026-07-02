@@ -8,7 +8,7 @@ function Dashboard() {
 
     const logout = () => {
 
-        localStorage.removeItem("user");
+        localStorage.removeItem("token");
 
         navigate("/");
 
@@ -56,8 +56,10 @@ function Dashboard() {
 
             <br /><br />
 
-            <button onClick={() => navigate("/lessons")}>
-                Lessons
+            <button 
+                onClick={() => navigate("/lessons")}
+                style ={{ background: "cyan", color: "black" }}
+                >Lessons
             </button>
 
             <br /><br />
@@ -68,8 +70,8 @@ function Dashboard() {
 
             <br /><br />
 
-            <button onClick={() => navigate("/enrollments")}>
-                Enrollments
+            <button onClick={() => navigate("/enrollment")}>
+                Enrollment Management
             </button>
 
             <br /><br />
@@ -86,7 +88,7 @@ function Dashboard() {
 
             <br /><br />
 
-            <button onClick={() => navigate("/results")}>
+            <button onClick={() => navigate("/ExamResult")}>
                 Exam Results
             </button>
 

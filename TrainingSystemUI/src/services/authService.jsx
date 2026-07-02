@@ -9,3 +9,4 @@ export const register = async (data) => {
     const response = await api.post("/users", data);
     return response.data;
 };
+
