@@ -24,17 +24,29 @@ function App() {
             <Routes>
                 <Route path="/" element={<Login />} />
                 <Route path="/register" element={<Register />} />
-                <Route path="/dashboard" 
-                element={
-                    <ProtectedRoute>
-                    <Dashboard />
-                    </ProtectedRoute>
-                } />
-                <Route path="/roles" element={<Role />} />
+
+                <Route path="/dashboard"
+                    element={
+                        <ProtectedRoute>
+                            <Dashboard />
+                        </ProtectedRoute>
+                    }
+                />
+
+                {/* FIX: this route had no ProtectedRoute wrapper at all before */}
+                <Route
+                    path="/roles"
+                    element={
+                        <ProtectedRoute roles={["Admin"]}>
+                            <Role />
+                        </ProtectedRoute>
+                    }
+                />
+
                 <Route
                     path="/users"
                     element={
-                        <ProtectedRoute>
+                        <ProtectedRoute roles={["Admin"]}>
                             <User />
                         </ProtectedRoute>
                     }
@@ -43,7 +55,7 @@ function App() {
                 <Route
                     path="/courses"
                     element={
-                        <ProtectedRoute>
+                        <ProtectedRoute roles={["Admin", "Trainer", "Student"]}>
                             <Course />
                         </ProtectedRoute>
                     }
@@ -52,16 +64,53 @@ function App() {
                 <Route
                     path="/lessons"
                     element={
-                        <ProtectedRoute>
+                        <ProtectedRoute roles={["Admin", "Trainer", "Student"]}>
                             <Lesson />
                         </ProtectedRoute>
                     }
                 />
-                <Route path="/materials" element={<Material />} />
-                <Route path="/enrollment" element={<Enrollment />} />    
-                <Route path="/exams" element={<Exam />} />     
-                <Route path="/questions" element={<Question />} /> 
-                <Route path="/ExamResult" element={<ExamResult />} />
+
+                {/* FIX: these five routes had no ProtectedRoute wrapper at all before */}
+                <Route
+                    path="/materials"
+                    element={
+                        <ProtectedRoute roles={["Admin", "Trainer", "Student"]}>
+                            <Material />
+                        </ProtectedRoute>
+                    }
+                />
+                <Route
+                    path="/enrollment"
+                    element={
+                        <ProtectedRoute roles={["Admin", "Trainer"]}>
+                            <Enrollment />
+                        </ProtectedRoute>
+                    }
+                />
+                <Route
+                    path="/exams"
+                    element={
+                        <ProtectedRoute roles={["Admin", "Trainer", "Student"]}>
+                            <Exam />
+                        </ProtectedRoute>
+                    }
+                />
+                <Route
+                    path="/questions"
+                    element={
+                        <ProtectedRoute roles={["Admin", "Trainer"]}>
+                            <Question />
+                        </ProtectedRoute>
+                    }
+                />
+                <Route
+                    path="/ExamResult"
+                    element={
+                        <ProtectedRoute roles={["Admin", "Trainer"]}>
+                            <ExamResult />
+                        </ProtectedRoute>
+                    }
+                />
             </Routes>
 
         </BrowserRouter>
