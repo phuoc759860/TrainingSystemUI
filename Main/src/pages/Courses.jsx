@@ -1,24 +1,18 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { getUsers } from "../services/userService";
-
 import {
     getCourses,
     createCourse,
     updateCourse,
     deleteCourse
 } from "../services/CourseService";
+import BackButton from "../components/BackButton";
 
 function Course() {
 
-    const navigate = useNavigate();
-
     const [courses, setCourses] = useState([]);
-
     const [editingId, setEditingId] = useState(null);
-
     const [trainers, setTrainers] = useState([]);
-
     const [search, setSearch] = useState("");
 
     const role = localStorage.getItem("role");
@@ -49,26 +43,23 @@ function Course() {
 
         setTrainers(trainerList);
 
-    };  
+    };
 
     const loadCourses = async () => {
-
         const res = await getCourses(search);
-
         setCourses(res.data);
-
     };
 
     const handleChange = (e) => {
-
         setForm({
-
             ...form,
-
             [e.target.name]: e.target.value
-
         });
+    };
 
+    const resetForm = () => {
+        setForm({ title: "", description: "", trainerID: "" });
+        setEditingId(null);
     };
 
     const handleSubmit = async () => {
@@ -82,36 +73,20 @@ function Course() {
         try {
 
             if (editingId == null) {
-
                 await createCourse(data);
-
                 alert("Course created.");
-
             } else {
-
                 await updateCourse(editingId, data);
-
                 alert("Course updated.");
-
-                setEditingId(null);
-
             }
 
-            setForm({
-                title: "",
-                description: "",
-                trainerID: ""
-            });
-
+            resetForm();
             loadCourses();
 
         }
         catch (err) {
-
             console.log(err);
-
             alert("Operation failed.");
-
         }
     };
 
@@ -120,13 +95,9 @@ function Course() {
         setEditingId(course.courseID);
 
         setForm({
-
             title: course.title,
-
             description: course.description,
-
             trainerID: course.trainerID
-
         });
 
     };
@@ -137,153 +108,130 @@ function Course() {
             return;
 
         await deleteCourse(id);
-
         loadCourses();
 
     };
 
     return (
 
-        <div style={{ padding: "30px" }}>
+        <div className="page">
 
-            <button onClick={() => navigate("/dashboard")}>
-                ← Back
-            </button>
+            <div className="page-header">
+                <div>
+                    <BackButton />
+                    <h2 style={{ marginTop: 12 }}>Course Management</h2>
+                </div>
 
-            <h2>Course Management</h2>
+                <input
+                    type="text"
+                    placeholder="Search course..."
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    style={{
+                        padding: "9px 12px",
+                        border: "1px solid var(--border)",
+                        borderRadius: 8,
+                        fontSize: 14
+                    }}
+                />
+            </div>
 
-            <hr />
-            <input
-                type="text"
-                placeholder="Search course..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-            />
+            <div className="card" style={{ marginBottom: 24 }}>
+                <div className="form-grid">
 
-            <br /><br />
+                    <div className="field">
+                        <label>Course Title</label>
+                        <input
+                            name="title"
+                            placeholder="Course Title"
+                            value={form.title}
+                            onChange={handleChange}
+                        />
+                    </div>
 
-            <input
+                    <div className="field">
+                        <label>Description</label>
+                        <textarea
+                            name="description"
+                            rows="3"
+                            placeholder="Description"
+                            value={form.description}
+                            onChange={handleChange}
+                        />
+                    </div>
 
-                name="title"
+                    {role === "Admin" && (
+                        <div className="field">
+                            <label>Trainer</label>
+                            <select
+                                name="trainerID"
+                                value={form.trainerID}
+                                onChange={handleChange}
+                            >
+                                <option value="">Select Trainer</option>
+                                {trainers.map(trainer => (
+                                    <option key={trainer.userID} value={trainer.userID}>
+                                        {trainer.name}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+                    )}
 
-                placeholder="Course Title"
+                </div>
 
-                value={form.title}
+                <button className="btn btn-primary" onClick={handleSubmit}>
+                    {editingId == null ? "Add Course" : "Update Course"}
+                </button>
 
-                onChange={handleChange}
+                {editingId != null && (
+                    <button
+                        className="btn btn-outline"
+                        style={{ marginLeft: 8 }}
+                        onClick={resetForm}
+                    >
+                        Cancel
+                    </button>
+                )}
+            </div>
 
-            />
-
-            <br /><br />
-
-            <textarea
-
-                name="description"
-
-                placeholder="Description"
-
-                rows="4"
-
-                cols="40"
-
-                value={form.description}
-
-                onChange={handleChange}
-
-            />
-            <br /><br />
-            
-            {role === "Admin" && (
-            <>
-                <select
-                    name="trainerID"
-                    value={form.trainerID}
-                    onChange={handleChange}
-                >
-                    <option value="">Select Trainer</option>
-
-                    {trainers.map(trainer => (
-                        <option
-                            key={trainer.userID}
-                            value={trainer.userID}
-                        >
-                            {trainer.name}
-                        </option>
-                    ))}
-                </select>
-
-                <br /><br />
-            </>
-        )}
-
-            <button onClick={handleSubmit}>
-
-                {editingId == null ? "Add Course" : "Update Course"}
-
-            </button>
-
-            <hr />
-
-            <table border="1" cellPadding="10">
+            <table className="table-modern">
 
                 <thead>
-
                     <tr>
-
                         <th>ID</th>
-
                         <th>Title</th>
-
                         <th>Description</th>
-
                         <th>Trainer</th>
-
-                        <th>Actions</th>
-
+                        <th></th>
                     </tr>
-
                 </thead>
 
                 <tbody>
-
                     {
-
                         courses.map(course => (
-
                             <tr key={course.courseID}>
-
                                 <td>{course.courseID}</td>
-
                                 <td>{course.title}</td>
-
                                 <td>{course.description}</td>
-
                                 <td>{course.trainerName}</td>
-
                                 <td>
-
                                     <button
+                                        className="btn btn-outline btn-sm"
                                         onClick={() => handleEdit(course)}
                                     >
                                         Edit
-                                    </button>
-
-                                    {" "}
-
+                                    </button>{" "}
                                     <button
+                                        className="btn btn-danger btn-sm"
                                         onClick={() => handleDelete(course.courseID)}
                                     >
                                         Delete
                                     </button>
-
                                 </td>
-
                             </tr>
-
                         ))
-
                     }
-
                 </tbody>
 
             </table>

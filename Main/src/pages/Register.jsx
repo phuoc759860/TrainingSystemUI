@@ -63,77 +63,85 @@ function Register() {
 
     return (
 
-        <div style={{ width: "400px", margin: "50px auto" }}>
+        <div style={{
+            minHeight: "100vh",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            background: "var(--surface-alt)"
+        }}>
+            <div className="card" style={{ width: 400 }}>
 
-            <BackButton />
+                <BackButton />
 
-            <h2>Register</h2>
+                <h2>Register</h2>
 
-            <form onSubmit={handleSubmit}>
+                <form onSubmit={handleSubmit}>
 
-                <input
-                    name="name"
-                    placeholder="Name"
-                    onChange={handleChange}
-                    required
-                />
+                    <div className="field" style={{ marginBottom: 14 }}>
+                        <label>Name</label>
+                        <input
+                            name="name"
+                            placeholder="Name"
+                            onChange={handleChange}
+                            required
+                        />
+                    </div>
 
-                <br /><br />
+                    <div className="field" style={{ marginBottom: 14 }}>
+                        <label>Email</label>
+                        <input
+                            name="email"
+                            type="email"
+                            placeholder="Email"
+                            onChange={handleChange}
+                            required
+                        />
+                    </div>
 
-                <input
-                    name="email"
-                    type="email"
-                    placeholder="Email"
-                    onChange={handleChange}
-                    required
-                />
+                    <div className="field" style={{ marginBottom: 14 }}>
+                        <label>Password</label>
+                        <input
+                            name="password"
+                            type="password"
+                            placeholder="Password"
+                            onChange={handleChange}
+                            required
+                        />
+                    </div>
 
-                <br /><br />
-
-                <input
-                    name="password"
-                    type="password"
-                    placeholder="Password"
-                    onChange={handleChange}
-                    required
-                />
-
-                <br /><br />
-
-                <select
-                    name="roleID"
-                    onChange={handleChange}
-                    required
-                >
-                    <option value="">
-                        Select Role
-                    </option>
-
-                    {
-                        roles.map(role => (
-
-                            <option
-                                key={role.roleID}
-                                value={role.roleID}
-                            >
-                                {role.roleName}
+                    <div className="field" style={{ marginBottom: 18 }}>
+                        <label>Role</label>
+                        <select
+                            name="roleID"
+                            onChange={handleChange}
+                            defaultValue=""
+                            required
+                        >
+                            <option value="">
+                                Select Role
                             </option>
 
-                        ))
-                    }
+                            {
+                                roles.map(role => (
+                                    <option
+                                        key={role.roleID}
+                                        value={role.roleID}
+                                    >
+                                        {role.roleName}
+                                    </option>
+                                ))
+                            }
+                        </select>
+                    </div>
 
-                </select>
+                    <button type="submit" className="btn btn-primary" style={{ width: "100%" }}>
+                        Register
+                    </button>
 
-                <br /><br />
+                </form>
 
-                <button type="submit">
-
-                    Register
-
-                </button>
-
-            </form>
-
+            </div>
         </div>
 
     );

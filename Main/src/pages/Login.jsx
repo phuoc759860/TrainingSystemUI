@@ -9,48 +9,9 @@ function Login() {
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
 
-    // const handleLogin = async (e) => {
-    
-    //     e.preventDefault();
-
-    //     try {
-
-    //         const result = await login({
-    //             email,
-    //             password
-    //         });
-
-    //         console.log(result);
-    //         localStorage.setItem("userID", result.userID);
-    //         localStorage.setItem("name", result.name);
-    //         localStorage.setItem("email", result.email);
-    //         localStorage.setItem("roleID", result.roleID);
-    //         localStorage.setItem("role", result.role);
-    //         alert("Login successful!");
-    //         console.log("Going to dashboard...");
-
-    //         navigate("/dashboard");
-
-    //     }
-    //     catch (error) {
-    //         console.log(error);
-
-    //         if (error.response) {
-    //             console.log("Status:", error.response.status);
-    //             console.log("Data:", error.response.data);
-    //             alert(error.response.data);
-    //         } else {
-    //             alert(error.message);
-    //         }
-    //     }
-
-    // };
-
     const handleLogin = async (e) => {
 
         e.preventDefault();
-
-        console.log("1. Login button clicked");
 
         try {
 
@@ -59,15 +20,11 @@ function Login() {
                 password
             });
 
-            console.log("2. Login result:", result);
-
             if (!result.token) {
-                console.error("No token received from backend!");
                 alert("Login failed: No token returned.");
                 return;
             }
 
-            // Save user information
             localStorage.setItem("token", result.token);
             localStorage.setItem("userID", result.userID);
             localStorage.setItem("name", result.name);
@@ -75,25 +32,12 @@ function Login() {
             localStorage.setItem("roleID", result.roleID);
             localStorage.setItem("role", result.role);
 
-            console.log("3. LocalStorage saved");
-
-            console.log("Token:", localStorage.getItem("token"));
-            console.log("Role:", localStorage.getItem("role"));
-
-            alert("Login successful!");
-
-            console.log("4. Going to dashboard...");
-
             navigate("/dashboard");
 
         }
         catch (error) {
 
-            console.error("LOGIN ERROR:", error);
-
             if (error.response) {
-                console.log("Status:", error.response.status);
-                console.log("Data:", error.response.data);
                 alert(error.response.data);
             }
             else {
@@ -105,46 +49,59 @@ function Login() {
 
     return (
 
-        <div style={{ width: "350px", margin: "80px auto" }}>
-            <h2>Login</h2>
+        <div style={{
+            minHeight: "100vh",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            background: "var(--surface-alt)"
+        }}>
+            <div className="card" style={{ width: 360 }}>
 
-            <form onSubmit={handleLogin}>
+                <h2 style={{ marginTop: 0 }}>Login</h2>
 
-                <input
-                    type="email"
-                    placeholder="Email"
-                    value={email}
-                    onChange={(e)=>setEmail(e.target.value)}
-                />
+                <form onSubmit={handleLogin}>
 
-                <br /><br />
+                    <div className="field" style={{ marginBottom: 14 }}>
+                        <label>Email</label>
+                        <input
+                            type="email"
+                            placeholder="Email"
+                            value={email}
+                            onChange={(e) => setEmail(e.target.value)}
+                        />
+                    </div>
 
-                <input
-                    type="password"
-                    placeholder="Password"
-                    value={password}
-                    onChange={(e)=>setPassword(e.target.value)}
-                />
+                    <div className="field" style={{ marginBottom: 18 }}>
+                        <label>Password</label>
+                        <input
+                            type="password"
+                            placeholder="Password"
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                        />
+                    </div>
 
-                <br /><br />
+                    <button type="submit" className="btn btn-primary" style={{ width: "100%" }}>
+                        Login
+                    </button>
 
-                <button type="submit">
-                    Login
-                </button>
-                <br /><br />
+                </form>
 
-                <p>
+                <p style={{ marginTop: 18, marginBottom: 8, color: "var(--ink-soft)", fontSize: 14 }}>
                     Don't have an account?
                 </p>
 
                 <button
                     type="button"
+                    className="btn btn-outline"
+                    style={{ width: "100%" }}
                     onClick={() => navigate("/register")}
                 >
                     Register
                 </button>
-            </form>
 
+            </div>
         </div>
 
     );

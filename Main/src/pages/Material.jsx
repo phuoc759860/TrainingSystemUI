@@ -1,42 +1,43 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
-
 import {
-    getMaterials,
-    createMaterial,
-    updateMaterial,
-    deleteMaterial
-} from "../services/materialService";
+    getLessons,
+    createLesson,
+    updateLesson,
+    deleteLesson
+} from "../services/LessonService";
+import { getCourses } from "../services/CourseService";
+import BackButton from "../components/BackButton";
 
-import { getLessons } from "../services/lessonService";
+function Lesson() {
 
-function Material() {
-
-    const navigate = useNavigate();
-
-    const [materials, setMaterials] = useState([]);
     const [lessons, setLessons] = useState([]);
-
+    const [courses, setCourses] = useState([]);
     const [editingId, setEditingId] = useState(null);
+    const [search, setSearch] = useState("");
+    const [courseId, setCourseId] = useState("");
 
     const [form, setForm] = useState({
         title: "",
-        lessonID: ""
+        description: "",
+        courseID: ""
     });
 
     useEffect(() => {
-        loadMaterials();
         loadLessons();
+    }, [search, courseId]);
+
+    useEffect(() => {
+        loadCourses();
     }, []);
 
-    const loadMaterials = async () => {
-        const res = await getMaterials();
-        setMaterials(res.data);
+    const loadLessons = async () => {
+        const res = await getLessons(search, courseId);
+        setLessons(res.data);
     };
 
-    const loadLessons = async () => {
-        const res = await getLessons();
-        setLessons(res.data);
+    const loadCourses = async () => {
+        const res = await getCourses();
+        setCourses(res.data);
     };
 
     const handleChange = (e) => {
@@ -46,204 +47,192 @@ function Material() {
         });
     };
 
-    const [file, setFile] = useState(null);
-
-    const handleSubmit = async () => {
-        try {
-            const formData = new FormData();
-
-            formData.append("title", form.title);
-            formData.append("lessonID", form.lessonID);
-
-            if (file) {
-                formData.append("file", file);
-            }
-
-            if (editingId == null) {
-                await createMaterial(formData);
-                alert("Material created.");
-            } else {
-                await updateMaterial(editingId, formData);
-                alert("Material updated.");
-            }
-
-            loadMaterials();
-
-        } catch (err) {
-            console.log(err.response?.data);
-            alert(JSON.stringify(err.response?.data));
-        }
+    const resetForm = () => {
+        setForm({ title: "", description: "", courseID: "" });
+        setEditingId(null);
     };
 
-    const handleEdit = (material) => {
+    const handleSubmit = async () => {
 
-        setEditingId(material.materialID);
+        try {
+
+            if (editingId == null) {
+                await createLesson(form);
+                alert("Lesson created.");
+            }
+            else {
+                await updateLesson(editingId, form);
+                alert("Lesson updated.");
+            }
+
+            resetForm();
+            loadLessons();
+
+        }
+        catch (err) {
+            console.log(err);
+            alert("Operation failed.");
+        }
+
+    };
+
+    const handleEdit = (lesson) => {
+
+        setEditingId(lesson.lessonID);
 
         setForm({
-            title: material.title,
-            lessonID: material.lessonID
+            title: lesson.title,
+            description: lesson.description,
+            courseID: lesson.courseID
         });
 
     };
 
     const handleDelete = async (id) => {
 
-        if (!window.confirm("Delete this material?"))
+        if (!window.confirm("Delete this lesson?"))
             return;
 
-        await deleteMaterial(id);
-
-        loadMaterials();
+        await deleteLesson(id);
+        loadLessons();
 
     };
 
     return (
 
-        <div style={{ padding: "30px" }}>
+        <div className="page">
 
-            <button onClick={() => navigate("/dashboard")}>
-                ← Back
-            </button>
+            <div className="page-header">
+                <div>
+                    <BackButton />
+                    <h2 style={{ marginTop: 12 }}>Lesson Management</h2>
+                </div>
+            </div>
 
-            <h2>Material Management</h2>
+            <div className="card" style={{ marginBottom: 24 }}>
+                <div className="form-grid">
+                    <div className="field">
+                        <label>Search</label>
+                        <input
+                            placeholder="Search lesson..."
+                            value={search}
+                            onChange={(e) => setSearch(e.target.value)}
+                        />
+                    </div>
 
-            <hr />
-
-            <input
-                name="title"
-                placeholder="Material Title"
-                value={form.title}
-                onChange={handleChange}
-            />
-
-            <br /><br />
-
-            <input
-                type="file"
-
-                onChange={(e)=>
-
-                    setFile(e.target.files[0])
-
-                }
-            />
-
-            <br /><br />
-
-            <select
-                name="lessonID"
-                value={form.lessonID}
-                onChange={handleChange}
-            >
-
-                <option value="">
-                    Select Lesson
-                </option>
-
-                {
-
-                    lessons.map(lesson => (
-
-                        <option
-                            key={lesson.lessonID}
-                            value={lesson.lessonID}
+                    <div className="field">
+                        <label>Filter by Course</label>
+                        <select
+                            value={courseId}
+                            onChange={(e) => setCourseId(e.target.value)}
                         >
-                            {lesson.title}
-                        </option>
+                            <option value="">All Courses</option>
+                            {courses.map(c => (
+                                <option key={c.courseID} value={c.courseID}>
+                                    {c.title}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+                </div>
+            </div>
 
-                    ))
+            <div className="card" style={{ marginBottom: 24 }}>
+                <div className="form-grid">
 
-                }
+                    <div className="field">
+                        <label>Lesson Title</label>
+                        <input
+                            name="title"
+                            placeholder="Lesson Title"
+                            value={form.title}
+                            onChange={handleChange}
+                        />
+                    </div>
 
-            </select>
+                    <div className="field">
+                        <label>Description</label>
+                        <textarea
+                            name="description"
+                            rows="3"
+                            placeholder="Description"
+                            value={form.description}
+                            onChange={handleChange}
+                        />
+                    </div>
 
-            <br /><br />
+                    <div className="field">
+                        <label>Course</label>
+                        <select
+                            name="courseID"
+                            value={form.courseID}
+                            onChange={handleChange}
+                        >
+                            <option value="">Select Course</option>
+                            {
+                                courses.map(course => (
+                                    <option key={course.courseID} value={course.courseID}>
+                                        {course.title}
+                                    </option>
+                                ))
+                            }
+                        </select>
+                    </div>
 
-            <button onClick={handleSubmit}>
+                </div>
 
-                {
+                <button className="btn btn-primary" onClick={handleSubmit}>
+                    {editingId == null ? "Add Lesson" : "Update Lesson"}
+                </button>
 
-                    editingId == null
+                {editingId != null && (
+                    <button
+                        className="btn btn-outline"
+                        style={{ marginLeft: 8 }}
+                        onClick={resetForm}
+                    >
+                        Cancel
+                    </button>
+                )}
+            </div>
 
-                        ? "Add Material"
-
-                        : "Update Material"
-
-                }
-
-            </button>
-
-            <hr />
-
-            <table border="1" cellPadding="10">
+            <table className="table-modern">
 
                 <thead>
-
                     <tr>
-
                         <th>ID</th>
                         <th>Title</th>
-                        <th>File Path</th>
-                        <th>Lesson</th>
-                        <th>Actions</th>
-
+                        <th>Description</th>
+                        <th>Course</th>
+                        <th></th>
                     </tr>
-
                 </thead>
 
                 <tbody>
-
                     {
-
-                        materials.map(material => (
-
-                            <tr key={material.materialID}>
-
-                                <td>{material.materialID}</td>
-                                <td>{material.title}</td>
+                        lessons.map(lesson => (
+                            <tr key={lesson.lessonID}>
+                                <td>{lesson.lessonID}</td>
+                                <td>{lesson.title}</td>
+                                <td>{lesson.description}</td>
+                                <td>{lesson.courseTitle}</td>
                                 <td>
-
-                                <a
-
-                                href={`http://localhost:5149${material.filePath}`}
-
-                                target="_blank"
-
-                                rel="noreferrer"
-
-                                >
-
-                                Open File
-
-                                </a>
-
-                                </td>
-                                <td>{material.lessonTitle}</td>
-
-                                <td>
-
                                     <button
-                                        onClick={() => handleEdit(material)}
+                                        className="btn btn-outline btn-sm"
+                                        onClick={() => handleEdit(lesson)}
                                     >
                                         Edit
-                                    </button>
-
-                                    {" "}
-
+                                    </button>{" "}
                                     <button
-                                        onClick={() => handleDelete(material.materialID)}
+                                        className="btn btn-danger btn-sm"
+                                        onClick={() => handleDelete(lesson.lessonID)}
                                     >
                                         Delete
                                     </button>
-
                                 </td>
-
                             </tr>
-
                         ))
-
                     }
-
                 </tbody>
 
             </table>
@@ -254,4 +243,4 @@ function Material() {
 
 }
 
-export default Material;
+export default Lesson;

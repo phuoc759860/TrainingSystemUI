@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import {
     getUsers,
     createUser,
@@ -7,10 +6,9 @@ import {
     deleteUser
 } from "../services/userService";
 import { getRoles } from "../services/roleService";
+import BackButton from "../components/BackButton";
 
 function User() {
-
-    const navigate = useNavigate();
 
     const [users, setUsers] = useState([]);
     const [editingId, setEditingId] = useState(null);
@@ -30,31 +28,25 @@ function User() {
     }, []);
 
     const loadUsers = async () => {
-
         const res = await getUsers();
-
         setUsers(res.data);
-
     };
 
     const loadRoles = async () => {
-
         const res = await getRoles();
-
         setRoles(res.data);
-
     };
 
     const handleChange = (e) => {
-
         setForm({
-
             ...form,
-
             [e.target.name]: e.target.value
-
         });
+    };
 
+    const resetForm = () => {
+        setForm({ name: "", email: "", password: "", roleID: "" });
+        setEditingId(null);
     };
 
     const handleSubmit = async () => {
@@ -62,38 +54,21 @@ function User() {
         try {
 
             if (editingId == null) {
-
                 await createUser(form);
-
                 alert("User created.");
-
             }
             else {
-
                 await updateUser(editingId, form);
-
                 alert("User updated.");
-
-                setEditingId(null);
-
             }
 
-            setForm({
-                name: "",
-                email: "",
-                password: "",
-                roleID: ""
-            });
-
+            resetForm();
             loadUsers();
 
         }
         catch (err) {
-
             console.log(err);
-
             alert("Operation failed.");
-
         }
 
     };
@@ -103,12 +78,10 @@ function User() {
         setEditingId(user.userID);
 
         setForm({
-
             name: user.name,
             email: user.email,
             password: "",
             roleID: user.roleID
-
         });
 
     };
@@ -119,142 +92,130 @@ function User() {
             return;
 
         await deleteUser(id);
-
         loadUsers();
 
     };
 
     return (
 
-        <div style={{ padding: "30px" }}>
+        <div className="page">
 
-            <button onClick={() => navigate("/dashboard")}>
-                ← Back
-            </button>
+            <div className="page-header">
+                <div>
+                    <BackButton />
+                    <h2 style={{ marginTop: 12 }}>User Management</h2>
+                </div>
+            </div>
 
-            <h2>User Management</h2>
+            <div className="card" style={{ marginBottom: 24 }}>
+                <div className="form-grid">
 
-            <hr />
+                    <div className="field">
+                        <label>Name</label>
+                        <input
+                            name="name"
+                            placeholder="Name"
+                            value={form.name}
+                            onChange={handleChange}
+                        />
+                    </div>
 
-            <input
-                name="name"
-                placeholder="Name"
-                value={form.name}
-                onChange={handleChange}
-            />
+                    <div className="field">
+                        <label>Email</label>
+                        <input
+                            name="email"
+                            placeholder="Email"
+                            value={form.email}
+                            onChange={handleChange}
+                        />
+                    </div>
 
-            <br /><br />
+                    <div className="field">
+                        <label>
+                            {editingId == null ? "Password" : "New Password (optional)"}
+                        </label>
+                        <input
+                            name="password"
+                            type="password"
+                            placeholder="Password"
+                            value={form.password}
+                            onChange={handleChange}
+                        />
+                    </div>
 
-            <input
-                name="email"
-                placeholder="Email"
-                value={form.email}
-                onChange={handleChange}
-            />
-
-            <br /><br />
-
-            <input
-                name="password"
-                type="password"
-                placeholder="Password"
-                value={form.password}
-                onChange={handleChange}
-            />
-
-            <br /><br />
-
-            <select
-                name="roleID"
-                value={form.roleID}
-                onChange={handleChange}
-            >
-
-                <option value="">
-                    Select Role
-                </option>
-
-                {
-                    roles.map(role => (
-
-                        <option
-                            key={role.roleID}
-                            value={role.roleID}
+                    <div className="field">
+                        <label>Role</label>
+                        <select
+                            name="roleID"
+                            value={form.roleID}
+                            onChange={handleChange}
                         >
-                            {role.roleName}
-                        </option>
+                            <option value="">Select Role</option>
+                            {
+                                roles.map(role => (
+                                    <option key={role.roleID} value={role.roleID}>
+                                        {role.roleName}
+                                    </option>
+                                ))
+                            }
+                        </select>
+                    </div>
 
-                    ))
-                }
+                </div>
 
-            </select>
+                <button className="btn btn-primary" onClick={handleSubmit}>
+                    {/* FIX: this always said "Add User" before, even while editing */}
+                    {editingId == null ? "Add User" : "Update User"}
+                </button>
 
-            <br /><br />
+                {editingId != null && (
+                    <button
+                        className="btn btn-outline"
+                        style={{ marginLeft: 8 }}
+                        onClick={resetForm}
+                    >
+                        Cancel
+                    </button>
+                )}
+            </div>
 
-            <button onClick={handleSubmit}>
-                Add User
-            </button>
-
-            <hr />
-
-            <table border="1" cellPadding="10">
+            <table className="table-modern">
 
                 <thead>
-
                     <tr>
-
                         <th>ID</th>
-
                         <th>Name</th>
-
                         <th>Email</th>
-
                         <th>Role</th>
-
-                        <th>Actions</th>
-
+                        <th></th>
                     </tr>
-
                 </thead>
 
                 <tbody>
-
                     {
                         users.map(user => (
-
                             <tr key={user.userID}>
-
                                 <td>{user.userID}</td>
-
                                 <td>{user.name}</td>
-
                                 <td>{user.email}</td>
-
                                 <td>{user.roleName}</td>
-
                                 <td>
-
                                     <button
+                                        className="btn btn-outline btn-sm"
                                         onClick={() => handleEdit(user)}
                                     >
                                         Edit
-                                    </button>
-
-                                    {" "}
-
+                                    </button>{" "}
                                     <button
+                                        className="btn btn-danger btn-sm"
                                         onClick={() => handleDelete(user.userID)}
                                     >
                                         Delete
                                     </button>
-
                                 </td>
-
                             </tr>
-
                         ))
                     }
-
                 </tbody>
 
             </table>
