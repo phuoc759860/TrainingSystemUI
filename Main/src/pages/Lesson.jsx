@@ -6,7 +6,7 @@ import {
     createLesson,
     updateLesson,
     deleteLesson
-} from "../services/lessonService";
+} from "../services/LessonService";
 
 import { getCourses } from "../services/CourseService";
 
@@ -37,9 +37,11 @@ function Lesson() {
     }, [search, courseId]);
 
     const loadLessons = async () => {
+        console.log("search =", search);
+        console.log("courseId =", courseId);
 
         const res = await getLessons(search, courseId);
-
+        console.log(res.data);
         setLessons(res.data);
 
     };

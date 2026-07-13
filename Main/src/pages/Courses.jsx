@@ -21,6 +21,8 @@ function Course() {
 
     const [search, setSearch] = useState("");
 
+    const role = localStorage.getItem("role");
+
     const [form, setForm] = useState({
         title: "",
         description: "",
@@ -32,7 +34,9 @@ function Course() {
     }, [search]);
 
     useEffect(() => {
-        loadTrainers();
+        if (role === "Admin") {
+            loadTrainers();
+        }
     }, []);
 
     const loadTrainers = async () => {
@@ -69,18 +73,23 @@ function Course() {
 
     const handleSubmit = async () => {
 
+        const data = { ...form };
+
+        if (role === "Trainer") {
+            delete data.trainerID;
+        }
+
         try {
 
             if (editingId == null) {
 
-                await createCourse(form);
+                await createCourse(data);
 
                 alert("Course created.");
 
-            }
-            else {
+            } else {
 
-                await updateCourse(editingId, form);
+                await updateCourse(editingId, data);
 
                 alert("Course updated.");
 
@@ -89,24 +98,21 @@ function Course() {
             }
 
             setForm({
-
                 title: "",
-
                 description: "",
-                
                 trainerID: ""
-
             });
 
             loadCourses();
 
         }
-        catch {
+        catch (err) {
+
+            console.log(err);
 
             alert("Operation failed.");
 
         }
-
     };
 
     const handleEdit = (course) => {
@@ -187,22 +193,28 @@ function Course() {
             />
             <br /><br />
             
-            <select
-                name="trainerID"
-                value={form.trainerID}
-                onChange={handleChange}
-            >
-                <option value="">Select Trainer</option>
+            {role === "Admin" && (
+            <>
+                <select
+                    name="trainerID"
+                    value={form.trainerID}
+                    onChange={handleChange}
+                >
+                    <option value="">Select Trainer</option>
 
-                {trainers.map(trainer => (
-                    <option
-                        key={trainer.userID}
-                        value={trainer.userID}
-                    >
-                        {trainer.name}
-                    </option>
-                ))}
-            </select>
+                    {trainers.map(trainer => (
+                        <option
+                            key={trainer.userID}
+                            value={trainer.userID}
+                        >
+                            {trainer.name}
+                        </option>
+                    ))}
+                </select>
+
+                <br /><br />
+            </>
+        )}
 
             <button onClick={handleSubmit}>
 
