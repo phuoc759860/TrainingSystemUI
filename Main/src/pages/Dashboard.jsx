@@ -3,167 +3,71 @@ import { useEffect, useState } from "react";
 import { getDashboard } from "../services/dashboardService";
 
 function Dashboard() {
-
     const navigate = useNavigate();
-
-    const user = JSON.parse(localStorage.getItem("user"));
-
     const role = localStorage.getItem("role");
-
     const name = localStorage.getItem("name");
-
     const email = localStorage.getItem("email");
-    
-    const roleID = localStorage.getItem("roleID");
-
     const [stats, setStats] = useState({});
 
     useEffect(() => {
-
-        const loadDashboard = async () => {
-
+        (async () => {
             try {
-
                 const res = await getDashboard();
-
                 setStats(res.data);
-
-            }
-            catch (err) {
-
+            } catch (err) {
                 console.log(err);
-
             }
-
-        };
-
-        loadDashboard();
-
+        })();
     }, []);
 
     const logout = () => {
-
         localStorage.clear();
-
         navigate("/");
-
     };
 
+    const modules = [
+        { label: "Roles", path: "/roles", roles: ["Admin"] },
+        { label: "User Management", path: "/users", roles: ["Admin"] },
+        { label: "Course Management", path: "/courses", roles: ["Admin", "Trainer", "Student"] },
+        { label: "Lessons", path: "/lessons", roles: ["Admin", "Trainer", "Student"] },
+        { label: "Materials", path: "/materials", roles: ["Admin", "Trainer", "Student"] },
+        { label: "Enrollment Management", path: "/enrollment", roles: ["Admin", "Trainer"] },
+        { label: "Exams", path: "/exams", roles: ["Admin", "Trainer", "Student"] },
+        { label: "Question Bank", path: "/questions", roles: ["Admin", "Trainer"] },
+        { label: "Exam Results", path: "/ExamResult", roles: ["Admin", "Trainer"] },
+    ];
+
     return (
+        <div className="page">
+            <div className="page-header">
+                <div>
+                    <h2>Welcome back, {name}</h2>
+                    <p style={{ color: "var(--ink-soft)", margin: "4px 0 0" }}>
+                        {email} · <span className="badge badge-success">{role}</span>
+                    </p>
+                </div>
+                <button className="btn btn-danger" onClick={logout}>Logout</button>
+            </div>
 
-        <div style={{ padding: "30px" }}>
+            <div className="stat-grid">
+                <div className="stat-card"><div className="num">{stats.totalUsers ?? "–"}</div><div className="label">Users</div></div>
+                <div className="stat-card"><div className="num">{stats.totalCourses ?? "–"}</div><div className="label">Courses</div></div>
+                <div className="stat-card"><div className="num">{stats.totalLessons ?? "–"}</div><div className="label">Lessons</div></div>
+                <div className="stat-card"><div className="num">{stats.totalMaterials ?? "–"}</div><div className="label">Materials</div></div>
+                <div className="stat-card"><div className="num">{stats.totalExams ?? "–"}</div><div className="label">Exams</div></div>
+                <div className="stat-card"><div className="num">{stats.totalEnrollments ?? "–"}</div><div className="label">Enrollments</div></div>
+                <div className="stat-card"><div className="num">{stats.totalResults ?? "–"}</div><div className="label">Results</div></div>
+            </div>
 
-            <h1>Training System</h1>
-
-            <hr />
-
-            <h2>
-                Welcome {name}
-            </h2>
-
-            <p>
-                Email: {email}
-            </p>
-
-            <p>
-                Role: {role}
-            </p>
-
-            <hr />
-
-            <h3>System Statistics</h3>
-
-            <p>Total Users: {stats.totalUsers}</p>
-
-            <p>Total Courses: {stats.totalCourses}</p>
-
-            <p>Total Lessons: {stats.totalLessons}</p>
-
-            <p>Total Materials: {stats.totalMaterials}</p>
-
-            <p>Total Exams: {stats.totalExams}</p>
-
-            <p>Total Enrollments: {stats.totalEnrollments}</p>
-
-            <p>Total Results: {stats.totalResults}</p>
-
-            <hr />
-
-            <h3>Modules</h3>
-
-            {role === "Admin" && (
-                <button onClick={() => navigate("/roles")}>
-                    Roles
-                </button>
-            )}
-
-            <br /><br />
-
-            {role === "Admin" && (
-                <button onClick={() => navigate("/users")}>
-                    User Management
-                </button>
-            )}
-
-            <br /><br />
-
-                <button onClick={() => navigate("/courses")}>
-                    Course Management
-                </button>
-
-            <br /><br />
-
-            <button 
-                onClick={() => navigate("/lessons")}
-                style ={{ background: "cyan", color: "black" }}
-                >Lessons
-            </button>
-
-            <br /><br />
-
-            <button onClick={() => navigate("/materials")}>
-                Materials
-            </button>
-
-            <br /><br />
-
-            <button onClick={() => navigate("/enrollment")}>
-                Enrollment Management
-            </button>
-
-            <br /><br />
-
-            <button onClick={() => navigate("/exams")}>
-                Exams
-            </button>
-
-            <br /><br />
-
-            {(role === "Admin" || role === "Trainer") && (
-                <button onClick={() => navigate("/questions")}>
-                    Question Bank
-                </button>
-            )}
-
-            <br /><br />
-
-            <button onClick={() => navigate("/ExamResult")}>
-                Exam Results
-            </button>
-
-            <br /><br /><br />
-
-            <button
-                style={{ background: "red", color: "white" }}
-                onClick={logout}
-            >
-                Logout
-            </button>
-
+            <h3 style={{ marginBottom: 14 }}>Modules</h3>
+            <div className="module-grid">
+                {modules.filter(m => m.roles.includes(role)).map(m => (
+                    <button key={m.path} className="module-card" onClick={() => navigate(m.path)}>
+                        {m.label}
+                    </button>
+                ))}
+            </div>
         </div>
-
     );
-
 }
-
 export default Dashboard;

@@ -12,6 +12,8 @@ import Exam from "./pages/Exams";
 import Question from "./pages/Question";
 import ExamResult from "./pages/ExamResult";
 import ProtectedRoute from "./components/ProtectedRoute";
+import "./styles/theme.css";
+import "./index.css";
 
 function App() {
 

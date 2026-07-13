@@ -1,384 +1,93 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-
-import {
-    getExamResults,
-    createExamResult,
-    updateExamResult,
-    deleteExamResult
-} from "../services/examResultService";
-
+import { getExamResults, createExamResult, updateExamResult, deleteExamResult } from "../services/examResultService";
 import { getUsers } from "../services/userService";
-import { getExams } from "../services/ExamService.jsx";
+import { getExams } from "../services/examService";
 
 function ExamResult() {
-
     const navigate = useNavigate();
-
     const [results, setResults] = useState([]);
     const [users, setUsers] = useState([]);
     const [exams, setExams] = useState([]);
-
     const [editingId, setEditingId] = useState(null);
+    const [form, setForm] = useState({ userID: "", examID: "", score: "" });
 
-    const [form, setForm] = useState({
-        userID: "",
-        examID: "",
-        score: ""
-    });
-    const loadResults = async () => {
+    useEffect(() => { loadResults(); loadUsers(); loadExams(); }, []);
+    const loadResults = async () => setResults((await getExamResults()).data);
+    const loadUsers = async () => setUsers((await getUsers()).data);
+    const loadExams = async () => setExams((await getExams()).data);
 
-        const res = await getExamResults();
-
-        setResults(res.data);
-
-    };
-
-    useEffect(() => {
-
-        loadResults();
-
-        loadUsers();
-
-        loadExams();
-
-    }, []);
-
-    const loadUsers = async () => {
-
-        const res = await getUsers();
-
-        setUsers(res.data);
-
-    };
-
-    const loadExams = async () => {
-
-        const res = await getExams();
-
-        setExams(res.data);
-
-    };
-
-    const handleChange = (e) => {
-
-        setForm({
-
-            ...form,
-
-            [e.target.name]: e.target.value
-
-        });
-
-    };
+    const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
 
     const handleSubmit = async () => {
-
         try {
-
-            const data = {
-                userID: Number(form.userID),
-                examID: Number(form.examID),
-                score: Number(form.score)
-            };
-
-            if (editingId == null) {
-
-                await createExamResult(data);
-
-                alert("Result created.");
-
-            } else {
-
-                await updateExamResult(editingId, data);
-
-                alert("Result updated.");
-
-            }
-
+            const data = { userID: Number(form.userID), examID: Number(form.examID), score: Number(form.score) };
+            if (editingId == null) { await createExamResult(data); alert("Result created."); }
+            else { await updateExamResult(editingId, data); alert("Result updated."); }
             setEditingId(null);
-
-            setForm({
-                userID: "",
-                examID: "",
-                score: ""
-            });
-
+            setForm({ userID: "", examID: "", score: "" });
             loadResults();
-
-        }
-        catch (err) {
-
+        } catch (err) {
             console.log(err.response?.data);
-
             alert("Operation failed.");
-
         }
-
     };
 
-    const handleEdit = (result) => {
-
-        setEditingId(result.resultID);
-
-        setForm({
-
-            userID: result.userID,
-
-            examID: result.examID,
-
-            score: result.score
-
-        });
-
-    };
-
-    const handleDelete = async (id) => {
-
-        if (!window.confirm("Delete result?"))
-            return;
-
-        await deleteExamResult(id);
-
-        loadResults();
-
-    };
+    const handleEdit = (r) => { setEditingId(r.resultID); setForm({ userID: r.userID, examID: r.examID, score: r.score }); };
+    const handleDelete = async (id) => { if (!window.confirm("Delete result?")) return; await deleteExamResult(id); loadResults(); };
 
     return (
-
-        <div style={{padding:"30px"}}>
-
-        <button
-        onClick={()=>navigate("/dashboard")}
-        >
-
-        ← Back
-
-        </button>
-
-        <h2>Exam Result Management</h2>
-
-        <hr/>
-
-        <select
-
-        name="userID"
-
-        value={form.userID}
-
-        onChange={handleChange}
-
-        >
-
-        <option value="">Select User</option>
-
-        {
-
-        users.map(user=>(
-
-        <option
-
-        key={user.userID}
-
-        value={user.userID}
-
-        >
-
-        {user.name}
-
-        </option>
-
-        ))
-
-        }
-
-        </select>
-
-        <br/><br/>
-
-        <select
-
-        name="examID"
-
-        value={form.examID}
-
-        onChange={handleChange}
-
-        >
-
-        <option value="">Select Exam</option>
-
-        {
-
-        exams.map(exam=>(
-
-        <option
-
-        key={exam.examID}
-
-        value={exam.examID}
-
-        >
-
-        {exam.title}
-
-        </option>
-
-        ))
-
-        }
-
-        </select>
-
-        <br/><br/>
-
-        <input
-
-        type="number"
-
-        name="score"
-
-        placeholder="Score"
-
-        value={form.score}
-
-        onChange={handleChange}
-
-        />
-
-        <br/><br/>
-
-        <button
-        onClick={handleSubmit}
-        >
-
-        {
-
-        editingId==null
-
-        ?
-
-        "Add Result"
-
-        :
-
-        "Update Result"
-
-        }
-
-        </button>
-
-        <hr/>
-
-        <table border="1" cellPadding="10">
-
-        <thead>
-
-        <tr>
-
-        <th>ID</th>
-
-        <th>User</th>
-
-        <th>Exam</th>
-
-        <th>Score</th>
-
-        <th>Passed</th>
-
-        <th>Submitted</th>
-
-        <th>Actions</th>
-
-        </tr>
-
-        </thead>
-
-        <tbody>
-
-        {
-
-        results.map(result=>(
-
-        <tr key={result.resultID}>
-
-        <td>{result.resultID}</td>
-
-        <td>{result.userName}</td>
-
-        <td>{result.examTitle}</td>
-
-        <td>{result.score}</td>
-
-        <td>
-
-        {
-
-        result.passed
-
-        ?
-
-        "✅ Passed"
-
-        :
-
-        "❌ Failed"
-
-        }
-
-        </td>
-
-        <td>
-
-        {
-
-        new Date(result.submittedAt)
-
-        .toLocaleString()
-
-        }
-
-        </td>
-
-        <td>
-
-        <button
-
-        onClick={()=>handleEdit(result)}
-
-        >
-
-        Edit
-
-        </button>
-
-        {" "}
-
-        <button
-
-        onClick={()=>handleDelete(result.resultID)}
-
-        >
-
-        Delete
-
-        </button>
-
-        </td>
-
-        </tr>
-
-        ))
-
-        }
-
-        </tbody>
-
-        </table>
-
+        <div className="page">
+            <div className="page-header">
+                <div>
+                    <button className="btn btn-outline btn-sm" onClick={() => navigate("/dashboard")}>← Back</button>
+                    <h2 style={{ marginTop: 12 }}>Exam Result Management</h2>
+                </div>
+            </div>
+
+            <div className="card" style={{ marginBottom: 24 }}>
+                <div className="form-grid">
+                    <div className="field">
+                        <label>User</label>
+                        <select name="userID" value={form.userID} onChange={handleChange}>
+                            <option value="">Select User</option>
+                            {users.map(u => <option key={u.userID} value={u.userID}>{u.name}</option>)}
+                        </select>
+                    </div>
+                    <div className="field">
+                        <label>Exam</label>
+                        <select name="examID" value={form.examID} onChange={handleChange}>
+                            <option value="">Select Exam</option>
+                            {exams.map(e => <option key={e.examID} value={e.examID}>{e.title}</option>)}
+                        </select>
+                    </div>
+                    <div className="field">
+                        <label>Score</label>
+                        <input type="number" name="score" min="0" max="100" placeholder="0–100" value={form.score} onChange={handleChange} />
+                    </div>
+                </div>
+                <button className="btn btn-primary" onClick={handleSubmit}>
+                    {editingId == null ? "Add Result" : "Update Result"}
+                </button>
+            </div>
+
+            <table className="table-modern">
+                <thead><tr><th>ID</th><th>User</th><th>Exam</th><th>Score</th><th>Status</th><th>Submitted</th><th></th></tr></thead>
+                <tbody>
+                    {results.map(r => (
+                        <tr key={r.resultID}>
+                            <td>{r.resultID}</td><td>{r.userName}</td><td>{r.examTitle}</td><td>{r.score}</td>
+                            <td><span className={`badge ${r.passed ? "badge-success" : "badge-danger"}`}>{r.passed ? "Passed" : "Failed"}</span></td>
+                            <td>{new Date(r.submittedAt).toLocaleString()}</td>
+                            <td>
+                                <button className="btn btn-outline btn-sm" onClick={() => handleEdit(r)}>Edit</button>{" "}
+                                <button className="btn btn-danger btn-sm" onClick={() => handleDelete(r.resultID)}>Delete</button>
+                            </td>
+                        </tr>
+                    ))}
+                </tbody>
+            </table>
         </div>
-
-        );
+    );
 }
-
 export default ExamResult;
