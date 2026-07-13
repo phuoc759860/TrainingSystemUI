@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { getExamResults, createExamResult, updateExamResult, deleteExamResult } from "../services/examResultService";
-import { getUsers } from "../services/userService";
-import { getExams } from "../services/examService";
+import { getExamResults, createExamResult, updateExamResult, deleteExamResult } from "../services/ExamResultService";
+import { getUsers } from "../services/UserService";
+import { getExams } from "../services/ExamService";
 
 function ExamResult() {
     const navigate = useNavigate();

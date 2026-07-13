@@ -4,8 +4,8 @@ import {
     createUser,
     updateUser,
     deleteUser
-} from "../services/userService";
-import { getRoles } from "../services/roleService";
+} from "../services/UserService";
+import { getRoles } from "../services/RoleService";
 import BackButton from "../components/BackButton";
 
 function User() {

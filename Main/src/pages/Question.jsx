@@ -1,17 +1,16 @@
+// Main/src/pages/Question.jsx
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
-
 import {
     getQuestions,
     createQuestion,
     updateQuestion,
     deleteQuestion
-} from "../services/questionService";
+} from "../services/QuestionService";
 
-import { getExams } from "../services/ExamService.jsx";
+import { getExams } from "../services/ExamService";
+import BackButton from "../components/BackButton";
 
 function Question() {
-    const navigate = useNavigate();
 
     const [questions, setQuestions] = useState([]);
     const [exams, setExams] = useState([]);
@@ -46,15 +45,25 @@ function Question() {
     };
 
     const handleChange = (e) => {
-
         setForm({
-
             ...form,
-
             [e.target.name]: e.target.value
-
         });
+    };
 
+    const resetForm = () => {
+        setForm({
+            examID: "",
+            content: "",
+            questionType: "MultipleChoice",
+            optionA: "",
+            optionB: "",
+            optionC: "",
+            optionD: "",
+            correctAnswer: "",
+            score: 1
+        });
+        setEditingId(null);
     };
 
     const handleSubmit = async () => {
@@ -62,15 +71,11 @@ function Question() {
         try {
 
             if (editingId == null) {
-
                 await createQuestion(form);
-
                 alert("Question created.");
-
-            } else {
-
+            }
+            else {
                 await updateQuestion(editingId, {
-
                     content: form.content,
                     questionType: form.questionType,
                     optionA: form.optionA,
@@ -79,34 +84,16 @@ function Question() {
                     optionD: form.optionD,
                     correctAnswer: form.correctAnswer,
                     score: Number(form.score)
-
                 });
-
                 alert("Question updated.");
-
             }
 
-            setEditingId(null);
-
-            setForm({
-                examID: "",
-                content: "",
-                questionType: "MultipleChoice",
-                optionA: "",
-                optionB: "",
-                optionC: "",
-                optionD: "",
-                correctAnswer: "",
-                score: 1
-            });
-
+            resetForm();
             loadQuestions();
 
         }
         catch {
-
             alert("Operation failed.");
-
         }
 
     };
@@ -116,7 +103,6 @@ function Question() {
         setEditingId(question.questionID);
 
         setForm({
-
             examID: question.examID,
             content: question.content,
             questionType: question.questionType,
@@ -126,7 +112,6 @@ function Question() {
             optionD: question.optionD,
             correctAnswer: question.correctAnswer,
             score: question.score
-
         });
 
     };
@@ -137,226 +122,161 @@ function Question() {
             return;
 
         await deleteQuestion(id);
-
         loadQuestions();
 
     };
 
     return (
 
-        <div style={{padding:"30px"}}>
-
-        <button onClick={()=>navigate("/dashboard")}>
-        ← Back
-        </button>
-
-        <h2>Question Bank Management</h2>
-
-        <hr/>
-
-        <select
-        name="examID"
-        value={form.examID}
-        onChange={handleChange}
-        disabled={editingId!=null}
-        >
-
-        <option value="">Select Exam</option>
-
-        {
-        exams.map(exam=>(
-
-        <option
-        key={exam.examID}
-        value={exam.examID}
-        >
-
-        {exam.title}
-
-        </option>
-
-        ))
-        }
-
-        </select>
-
-        <br/><br/>
-
-        <input
-        name="content"
-        placeholder="Question"
-        value={form.content}
-        onChange={handleChange}
-        />
-
-        <br/><br/>
-
-        <select
-        name="questionType"
-        value={form.questionType}
-        onChange={handleChange}
-        >
-
-        <option value="MultipleChoice">
-        Multiple Choice
-        </option>
-
-        <option value="Essay">
-        Essay
-        </option>
-
-        </select>
-
-        <br/><br/>
-
-        <input
-        name="optionA"
-        placeholder="Option A"
-        value={form.optionA}
-        onChange={handleChange}
-        />
-
-        <br/><br/>
-
-        <input
-        name="optionB"
-        placeholder="Option B"
-        value={form.optionB}
-        onChange={handleChange}
-        />
-
-        <br/><br/>
-
-        <input
-        name="optionC"
-        placeholder="Option C"
-        value={form.optionC}
-        onChange={handleChange}
-        />
-
-        <br/><br/>
-
-        <input
-        name="optionD"
-        placeholder="Option D"
-        value={form.optionD}
-        onChange={handleChange}
-        />
-
-        <br/><br/>
-
-        <input
-        name="correctAnswer"
-        placeholder="Correct Answer"
-        value={form.correctAnswer}
-        onChange={handleChange}
-        />
-
-        <br/><br/>
-
-        <input
-        type="number"
-        name="score"
-        placeholder="Score"
-        value={form.score}
-        onChange={handleChange}
-        />
-
-        <br/><br/>
-
-        <button onClick={handleSubmit}>
-
-        {
-
-        editingId==null
-
-        ?
-
-        "Add Question"
-
-        :
-
-        "Update Question"
-
-        }
-
-        </button>
-
-        <hr/>
-
-        <table border="1" cellPadding="10">
-
-        <thead>
-
-        <tr>
-
-        <th>ID</th>
-        <th>Exam</th>
-        <th>Question</th>
-        <th>Type</th>
-        <th>Correct</th>
-        <th>Score</th>
-        <th>Actions</th>
-
-        </tr>
-
-        </thead>
-
-        <tbody>
-
-        {
-
-        questions.map(question=>(
-
-        <tr key={question.questionID}>
-
-        <td>{question.questionID}</td>
-
-        <td>{question.examTitle}</td>
-
-        <td>{question.content}</td>
-
-        <td>{question.questionType}</td>
-
-        <td>{question.correctAnswer}</td>
-
-        <td>{question.score}</td>
-
-        <td>
-
-        <button
-        onClick={()=>handleEdit(question)}
-        >
-
-        Edit
-
-        </button>
-
-        {" "}
-
-        <button
-        onClick={()=>handleDelete(question.questionID)}
-        >
-
-        Delete
-
-        </button>
-
-        </td>
-
-        </tr>
-
-        ))
-
-        }
-
-        </tbody>
-
-        </table>
+        <div className="page">
+
+            <div className="page-header">
+                <div>
+                    <BackButton />
+                    <h2 style={{ marginTop: 12 }}>Question Bank Management</h2>
+                </div>
+            </div>
+
+            <div className="card" style={{ marginBottom: 24 }}>
+                <div className="form-grid">
+
+                    <div className="field">
+                        <label>Exam</label>
+                        <select
+                            name="examID"
+                            value={form.examID}
+                            onChange={handleChange}
+                            disabled={editingId != null}
+                        >
+                            <option value="">Select Exam</option>
+                            {
+                                exams.map(exam => (
+                                    <option key={exam.examID} value={exam.examID}>
+                                        {exam.title}
+                                    </option>
+                                ))
+                            }
+                        </select>
+                    </div>
+
+                    <div className="field">
+                        <label>Question Type</label>
+                        <select
+                            name="questionType"
+                            value={form.questionType}
+                            onChange={handleChange}
+                        >
+                            <option value="MultipleChoice">Multiple Choice</option>
+                            <option value="Essay">Essay</option>
+                        </select>
+                    </div>
+
+                    <div className="field" style={{ gridColumn: "1 / -1" }}>
+                        <label>Question</label>
+                        <textarea
+                            name="content"
+                            rows="2"
+                            placeholder="Question text"
+                            value={form.content}
+                            onChange={handleChange}
+                        />
+                    </div>
+
+                    <div className="field">
+                        <label>Option A</label>
+                        <input name="optionA" placeholder="Option A" value={form.optionA} onChange={handleChange} />
+                    </div>
+
+                    <div className="field">
+                        <label>Option B</label>
+                        <input name="optionB" placeholder="Option B" value={form.optionB} onChange={handleChange} />
+                    </div>
+
+                    <div className="field">
+                        <label>Option C</label>
+                        <input name="optionC" placeholder="Option C" value={form.optionC} onChange={handleChange} />
+                    </div>
+
+                    <div className="field">
+                        <label>Option D</label>
+                        <input name="optionD" placeholder="Option D" value={form.optionD} onChange={handleChange} />
+                    </div>
+
+                    <div className="field">
+                        <label>Correct Answer</label>
+                        <input name="correctAnswer" placeholder="Correct Answer" value={form.correctAnswer} onChange={handleChange} />
+                    </div>
+
+                    <div className="field">
+                        <label>Score</label>
+                        <input type="number" name="score" placeholder="Score" value={form.score} onChange={handleChange} />
+                    </div>
+
+                </div>
+
+                <button className="btn btn-primary" onClick={handleSubmit}>
+                    {editingId == null ? "Add Question" : "Update Question"}
+                </button>
+
+                {editingId != null && (
+                    <button
+                        className="btn btn-outline"
+                        style={{ marginLeft: 8 }}
+                        onClick={resetForm}
+                    >
+                        Cancel
+                    </button>
+                )}
+            </div>
+
+            <table className="table-modern">
+
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Exam</th>
+                        <th>Question</th>
+                        <th>Type</th>
+                        <th>Correct</th>
+                        <th>Score</th>
+                        <th></th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    {
+                        questions.map(question => (
+                            <tr key={question.questionID}>
+                                <td>{question.questionID}</td>
+                                <td>{question.examTitle}</td>
+                                <td>{question.content}</td>
+                                <td>{question.questionType}</td>
+                                <td>{question.correctAnswer}</td>
+                                <td>{question.score}</td>
+                                <td>
+                                    <button
+                                        className="btn btn-outline btn-sm"
+                                        onClick={() => handleEdit(question)}
+                                    >
+                                        Edit
+                                    </button>{" "}
+                                    <button
+                                        className="btn btn-danger btn-sm"
+                                        onClick={() => handleDelete(question.questionID)}
+                                    >
+                                        Delete
+                                    </button>
+                                </td>
+                            </tr>
+                        ))
+                    }
+                </tbody>
+
+            </table>
 
         </div>
 
-        );
+    );
 }
 
 export default Question;

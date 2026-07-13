@@ -1,135 +1,132 @@
+// Main/src/pages/Material.jsx
 import { useEffect, useState } from "react";
 import {
-    getLessons,
-    createLesson,
-    updateLesson,
-    deleteLesson
-} from "../services/LessonService";
-import { getCourses } from "../services/CourseService";
+    getMaterials,
+    createMaterial,
+    updateMaterial,
+    deleteMaterial
+} from "../services/MaterialService";
+import { getLessons } from "../services/LessonService";
 import BackButton from "../components/BackButton";
 
-function Lesson() {
+// Files are served from the API host itself (see Program.cs UseStaticFiles),
+// not under /api, so this can't reuse the axios baseURL directly.
+const FILE_HOST = "http://localhost:5149";
 
+function Material() {
+
+    const role = localStorage.getItem("role");
+    const canManage = role === "Admin" || role === "Trainer";
+
+    const [materials, setMaterials] = useState([]);
     const [lessons, setLessons] = useState([]);
-    const [courses, setCourses] = useState([]);
+    const [lessonFilter, setLessonFilter] = useState("");
     const [editingId, setEditingId] = useState(null);
-    const [search, setSearch] = useState("");
-    const [courseId, setCourseId] = useState("");
 
-    const [form, setForm] = useState({
-        title: "",
-        description: "",
-        courseID: ""
-    });
+    const [title, setTitle] = useState("");
+    const [lessonID, setLessonID] = useState("");
+    const [file, setFile] = useState(null);
 
     useEffect(() => {
+        loadMaterials();
         loadLessons();
-    }, [search, courseId]);
-
-    useEffect(() => {
-        loadCourses();
     }, []);
 
+    const loadMaterials = async () => {
+        const res = await getMaterials();
+        setMaterials(res.data);
+    };
+
     const loadLessons = async () => {
-        const res = await getLessons(search, courseId);
+        const res = await getLessons();
         setLessons(res.data);
     };
 
-    const loadCourses = async () => {
-        const res = await getCourses();
-        setCourses(res.data);
-    };
-
-    const handleChange = (e) => {
-        setForm({
-            ...form,
-            [e.target.name]: e.target.value
-        });
-    };
-
     const resetForm = () => {
-        setForm({ title: "", description: "", courseID: "" });
+        setTitle("");
+        setLessonID("");
+        setFile(null);
         setEditingId(null);
     };
 
     const handleSubmit = async () => {
 
-        try {
+        if (title.trim() === "" || lessonID === "") {
+            alert("Title and lesson are required.");
+            return;
+        }
 
+        if (editingId == null && !file) {
+            alert("Please choose a file to upload.");
+            return;
+        }
+
+        const data = new FormData();
+        data.append("Title", title);
+        data.append("LessonID", lessonID);
+        if (file) {
+            data.append("File", file);
+        }
+
+        try {
             if (editingId == null) {
-                await createLesson(form);
-                alert("Lesson created.");
-            }
-            else {
-                await updateLesson(editingId, form);
-                alert("Lesson updated.");
+                await createMaterial(data);
+                alert("Material uploaded.");
+            } else {
+                await updateMaterial(editingId, data);
+                alert("Material updated.");
             }
 
             resetForm();
-            loadLessons();
-
+            loadMaterials();
         }
         catch (err) {
             console.log(err);
             alert("Operation failed.");
         }
-
     };
 
-    const handleEdit = (lesson) => {
-
-        setEditingId(lesson.lessonID);
-
-        setForm({
-            title: lesson.title,
-            description: lesson.description,
-            courseID: lesson.courseID
-        });
-
+    const handleEdit = (material) => {
+        setEditingId(material.materialID);
+        setTitle(material.title);
+        setLessonID(material.lessonID);
+        setFile(null);
     };
 
     const handleDelete = async (id) => {
-
-        if (!window.confirm("Delete this lesson?"))
+        if (!window.confirm("Delete this material?"))
             return;
 
-        await deleteLesson(id);
-        loadLessons();
-
+        await deleteMaterial(id);
+        loadMaterials();
     };
 
-    return (
+    const visibleMaterials = lessonFilter
+        ? materials.filter(m => String(m.lessonID) === String(lessonFilter))
+        : materials;
 
+    return (
         <div className="page">
 
             <div className="page-header">
                 <div>
                     <BackButton />
-                    <h2 style={{ marginTop: 12 }}>Lesson Management</h2>
+                    <h2 style={{ marginTop: 12 }}>Material Management</h2>
                 </div>
             </div>
 
             <div className="card" style={{ marginBottom: 24 }}>
                 <div className="form-grid">
                     <div className="field">
-                        <label>Search</label>
-                        <input
-                            placeholder="Search lesson..."
-                            value={search}
-                            onChange={(e) => setSearch(e.target.value)}
-                        />
-                    </div>
-
-                    <div className="field">
-                        <label>Filter by Course</label>
+                        <label>Filter by Lesson</label>
                         <select
-                            value={courseId}
-                            onChange={(e) => setCourseId(e.target.value)}
+                            value={lessonFilter}
+                            onChange={(e) => setLessonFilter(e.target.value)}
                         >
-                            <option value="">All Courses</option>
-                            {courses.map(c => (
-                                <option key={c.courseID} value={c.courseID}>
-                                    {c.title}
+                            <option value="">All Lessons</option>
+                            {lessons.map(l => (
+                                <option key={l.lessonID} value={l.lessonID}>
+                                    {l.title}
                                 </option>
                             ))}
                         </select>
@@ -137,110 +134,98 @@ function Lesson() {
                 </div>
             </div>
 
-            <div className="card" style={{ marginBottom: 24 }}>
-                <div className="form-grid">
+            {canManage && (
+                <div className="card" style={{ marginBottom: 24 }}>
+                    <div className="form-grid">
+                        <div className="field">
+                            <label>Title</label>
+                            <input
+                                placeholder="Material Title"
+                                value={title}
+                                onChange={(e) => setTitle(e.target.value)}
+                            />
+                        </div>
 
-                    <div className="field">
-                        <label>Lesson Title</label>
-                        <input
-                            name="title"
-                            placeholder="Lesson Title"
-                            value={form.title}
-                            onChange={handleChange}
-                        />
-                    </div>
-
-                    <div className="field">
-                        <label>Description</label>
-                        <textarea
-                            name="description"
-                            rows="3"
-                            placeholder="Description"
-                            value={form.description}
-                            onChange={handleChange}
-                        />
-                    </div>
-
-                    <div className="field">
-                        <label>Course</label>
-                        <select
-                            name="courseID"
-                            value={form.courseID}
-                            onChange={handleChange}
-                        >
-                            <option value="">Select Course</option>
-                            {
-                                courses.map(course => (
-                                    <option key={course.courseID} value={course.courseID}>
-                                        {course.title}
+                        <div className="field">
+                            <label>Lesson</label>
+                            <select
+                                value={lessonID}
+                                onChange={(e) => setLessonID(e.target.value)}
+                                disabled={editingId != null}
+                            >
+                                <option value="">Select Lesson</option>
+                                {lessons.map(l => (
+                                    <option key={l.lessonID} value={l.lessonID}>
+                                        {l.title}
                                     </option>
-                                ))
-                            }
-                        </select>
+                                ))}
+                            </select>
+                        </div>
+
+                        <div className="field">
+                            <label>
+                                {editingId == null ? "File" : "Replace File (optional)"}
+                            </label>
+                            <input
+                                type="file"
+                                onChange={(e) => setFile(e.target.files[0] ?? null)}
+                            />
+                        </div>
                     </div>
 
-                </div>
-
-                <button className="btn btn-primary" onClick={handleSubmit}>
-                    {editingId == null ? "Add Lesson" : "Update Lesson"}
-                </button>
-
-                {editingId != null && (
-                    <button
-                        className="btn btn-outline"
-                        style={{ marginLeft: 8 }}
-                        onClick={resetForm}
-                    >
-                        Cancel
+                    <button className="btn btn-primary" onClick={handleSubmit}>
+                        {editingId == null ? "Upload Material" : "Update Material"}
                     </button>
-                )}
-            </div>
+
+                    {editingId != null && (
+                        <button
+                            className="btn btn-outline"
+                            style={{ marginLeft: 8 }}
+                            onClick={resetForm}
+                        >
+                            Cancel
+                        </button>
+                    )}
+                </div>
+            )}
 
             <table className="table-modern">
-
                 <thead>
                     <tr>
                         <th>ID</th>
                         <th>Title</th>
-                        <th>Description</th>
-                        <th>Course</th>
-                        <th></th>
+                        <th>Lesson</th>
+                        <th>File</th>
+                        {canManage && <th></th>}
                     </tr>
                 </thead>
-
                 <tbody>
-                    {
-                        lessons.map(lesson => (
-                            <tr key={lesson.lessonID}>
-                                <td>{lesson.lessonID}</td>
-                                <td>{lesson.title}</td>
-                                <td>{lesson.description}</td>
-                                <td>{lesson.courseTitle}</td>
+                    {visibleMaterials.map(material => (
+                        <tr key={material.materialID}>
+                            <td>{material.materialID}</td>
+                            <td>{material.title}</td>
+                            <td>{material.lessonTitle}</td>
+                            <td>
+                                <a href={`${FILE_HOST}${material.filePath}`} target="_blank" rel="noreferrer">
+                                    Open
+                                </a>
+                            </td>
+                            {canManage && (
                                 <td>
-                                    <button
-                                        className="btn btn-outline btn-sm"
-                                        onClick={() => handleEdit(lesson)}
-                                    >
+                                    <button className="btn btn-outline btn-sm" onClick={() => handleEdit(material)}>
                                         Edit
                                     </button>{" "}
-                                    <button
-                                        className="btn btn-danger btn-sm"
-                                        onClick={() => handleDelete(lesson.lessonID)}
-                                    >
+                                    <button className="btn btn-danger btn-sm" onClick={() => handleDelete(material.materialID)}>
                                         Delete
                                     </button>
                                 </td>
-                            </tr>
-                        ))
-                    }
+                            )}
+                        </tr>
+                    ))}
                 </tbody>
-
             </table>
-
         </div>
-
     );
-
 }
 
-export default Lesson;
+export default Material;

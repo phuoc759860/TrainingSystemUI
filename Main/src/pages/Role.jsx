@@ -4,7 +4,7 @@ import {
     createRole,
     updateRole,
     deleteRole
-} from "../services/roleService";
+} from "../services/RoleService";
 import BackButton from "../components/BackButton";
 
 function Role() {

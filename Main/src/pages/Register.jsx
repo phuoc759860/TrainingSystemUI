@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { register } from "../services/authService";
-import { getRoles } from "../services/roleService";
+import { getRoles } from "../services/RoleService";
 import { useNavigate } from "react-router-dom";
 import BackButton from "../components/BackButton";
 

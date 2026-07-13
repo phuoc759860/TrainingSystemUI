@@ -1,19 +1,16 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
-
 import {
     getEnrollments,
     createEnrollment,
     updateEnrollment,
     deleteEnrollment
-} from "../services/enrollmentService";
+} from "../services/EnrollmentService";
 
-import { getUsers } from "../services/userService";
-import { getCourses } from "../services/courseService";
+import { getUsers } from "../services/UserService";
+import { getCourses } from "../services/CourseService";
+import BackButton from "../components/BackButton";
 
 function Enrollment() {
-
-    const navigate = useNavigate();
 
     const [enrollments, setEnrollments] = useState([]);
     const [users, setUsers] = useState([]);
@@ -28,49 +25,36 @@ function Enrollment() {
     });
 
     useEffect(() => {
-
-    loadEnrollments();
-
-    loadUsers();
-
-    loadCourses();
-
-}, []);
+        loadEnrollments();
+        loadUsers();
+        loadCourses();
+    }, []);
 
     const loadEnrollments = async () => {
-
         const res = await getEnrollments();
-
         setEnrollments(res.data);
-
     };
 
     const loadUsers = async () => {
-
         const res = await getUsers();
-
         setUsers(res.data);
-
     };
 
     const loadCourses = async () => {
-
         const res = await getCourses();
-
         setCourses(res.data);
-
     };
 
     const handleChange = (e) => {
-
         setForm({
-
             ...form,
-
             [e.target.name]: e.target.value
-
         });
+    };
 
+    const resetForm = () => {
+        setForm({ userID: "", courseID: "", status: "In Progress" });
+        setEditingId(null);
     };
 
     const handleSubmit = async () => {
@@ -78,44 +62,20 @@ function Enrollment() {
         try {
 
             if (editingId == null) {
-
                 await createEnrollment(form);
-
                 alert("Enrollment created.");
-
             }
             else {
-
-                await updateEnrollment(editingId, {
-
-                    status: form.status
-
-                });
-
+                await updateEnrollment(editingId, { status: form.status });
                 alert("Enrollment updated.");
-
             }
 
-            setEditingId(null);
-
-            setForm({
-
-                userID: "",
-
-                courseID: "",
-
-                status: "In Progress"
-
-            });
-
+            resetForm();
             loadEnrollments();
 
         }
-
         catch {
-
             alert("Operation failed.");
-
         }
 
     };
@@ -125,13 +85,9 @@ function Enrollment() {
         setEditingId(enrollment.enrollmentID);
 
         setForm({
-
             userID: enrollment.userID,
-
             courseID: enrollment.courseID,
-
             status: enrollment.status
-
         });
 
     };
@@ -142,200 +98,139 @@ function Enrollment() {
             return;
 
         await deleteEnrollment(id);
-
         loadEnrollments();
 
     };
 
     return (
 
-        <div style={{ padding: "30px" }}>
+        <div className="page">
 
-            <button onClick={() => navigate("/dashboard")}>
-                ← Back
-            </button>
+            <div className="page-header">
+                <div>
+                    <BackButton />
+                    <h2 style={{ marginTop: 12 }}>Enrollment Management</h2>
+                </div>
+            </div>
 
-            <h2>Enrollment Management</h2>
+            <div className="card" style={{ marginBottom: 24 }}>
+                <div className="form-grid">
 
-            <hr />
-
-            {/* User */}
-
-            <select
-                name="userID"
-                value={form.userID}
-                onChange={handleChange}
-                disabled={editingId != null}
-            >
-
-                <option value="">
-                    Select User
-                </option>
-
-                {
-
-                    users.map(user => (
-
-                        <option
-                            key={user.userID}
-                            value={user.userID}
+                    <div className="field">
+                        <label>User</label>
+                        <select
+                            name="userID"
+                            value={form.userID}
+                            onChange={handleChange}
+                            disabled={editingId != null}
                         >
-                            {user.name}
-                        </option>
+                            <option value="">Select User</option>
+                            {
+                                users.map(user => (
+                                    <option key={user.userID} value={user.userID}>
+                                        {user.name}
+                                    </option>
+                                ))
+                            }
+                        </select>
+                    </div>
 
-                    ))
-
-                }
-
-            </select>
-
-            <br /><br />
-
-            {/* Course */}
-
-            <select
-                name="courseID"
-                value={form.courseID}
-                onChange={handleChange}
-                disabled={editingId != null}
-            >
-
-                <option value="">
-                    Select Course
-                </option>
-
-                {
-
-                    courses.map(course => (
-
-                        <option
-                            key={course.courseID}
-                            value={course.courseID}
+                    <div className="field">
+                        <label>Course</label>
+                        <select
+                            name="courseID"
+                            value={form.courseID}
+                            onChange={handleChange}
+                            disabled={editingId != null}
                         >
-                            {course.title}
-                        </option>
+                            <option value="">Select Course</option>
+                            {
+                                courses.map(course => (
+                                    <option key={course.courseID} value={course.courseID}>
+                                        {course.title}
+                                    </option>
+                                ))
+                            }
+                        </select>
+                    </div>
 
-                    ))
+                    <div className="field">
+                        <label>Status</label>
+                        <select
+                            name="status"
+                            value={form.status}
+                            onChange={handleChange}
+                        >
+                            <option value="In Progress">In Progress</option>
+                            <option value="Completed">Completed</option>
+                            <option value="Dropped">Dropped</option>
+                        </select>
+                    </div>
 
-                }
+                </div>
 
-            </select>
+                <button className="btn btn-primary" onClick={handleSubmit}>
+                    {editingId == null ? "Add Enrollment" : "Update Enrollment"}
+                </button>
 
-            <br /><br />
+                {editingId != null && (
+                    <button
+                        className="btn btn-outline"
+                        style={{ marginLeft: 8 }}
+                        onClick={resetForm}
+                    >
+                        Cancel
+                    </button>
+                )}
+            </div>
 
-            {/* Status */}
-
-            <select
-                name="status"
-                value={form.status}
-                onChange={handleChange}
-            >
-
-                <option value="In Progress">
-                    In Progress
-                </option>
-
-                <option value="Completed">
-                    Completed
-                </option>
-
-                <option value="Dropped">
-                    Dropped
-                </option>
-
-            </select>
-
-            <br /><br />
-
-            <button onClick={handleSubmit}>
-
-                {
-
-                    editingId == null
-
-                        ? "Add Enrollment"
-
-                        : "Update Enrollment"
-
-                }
-
-            </button>
-
-            <hr />
-
-            <table border="1" cellPadding="10">
+            <table className="table-modern">
 
                 <thead>
-
                     <tr>
-
                         <th>ID</th>
                         <th>User</th>
                         <th>Course</th>
                         <th>Enroll Date</th>
                         <th>Status</th>
-                        <th>Actions</th>
-
+                        <th></th>
                     </tr>
-
                 </thead>
 
                 <tbody>
-
                     {
-
                         enrollments.map(enrollment => (
-
                             <tr key={enrollment.enrollmentID}>
-
+                                <td>{enrollment.enrollmentID}</td>
+                                <td>{enrollment.userName}</td>
+                                <td>{enrollment.courseTitle}</td>
+                                <td>{new Date(enrollment.enrollDate).toLocaleDateString()}</td>
                                 <td>
-                                    {enrollment.enrollmentID}
+                                    <span className={
+                                        enrollment.status === "Completed" ? "badge badge-success" :
+                                        enrollment.status === "Dropped" ? "badge badge-danger" :
+                                        "badge"
+                                    }>
+                                        {enrollment.status}
+                                    </span>
                                 </td>
-
                                 <td>
-                                    {enrollment.userName}
-                                </td>
-
-                                <td>
-                                    {enrollment.courseTitle}
-                                </td>
-
-                                <td>
-                                    {
-                                        new Date(
-                                            enrollment.enrollDate
-                                        ).toLocaleDateString()
-                                    }
-                                </td>
-
-                                <td>
-                                    {enrollment.status}
-                                </td>
-
-                                <td>
-
                                     <button
+                                        className="btn btn-outline btn-sm"
                                         onClick={() => handleEdit(enrollment)}
                                     >
                                         Edit
-                                    </button>
-
-                                    {" "}
-
+                                    </button>{" "}
                                     <button
+                                        className="btn btn-danger btn-sm"
                                         onClick={() => handleDelete(enrollment.enrollmentID)}
                                     >
                                         Delete
                                     </button>
-
                                 </td>
-
                             </tr>
-
                         ))
-
                     }
-
                 </tbody>
 
             </table>

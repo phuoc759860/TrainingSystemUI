@@ -1,6 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
-import { getDashboard } from "../services/dashboardService";
+import { getDashboard } from "../services/DashboardService";
 
 function Dashboard() {
     const navigate = useNavigate();
