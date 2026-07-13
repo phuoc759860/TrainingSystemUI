@@ -9,9 +9,48 @@ function Login() {
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
 
-    const handleLogin = async (e) => {
+    // const handleLogin = async (e) => {
     
+    //     e.preventDefault();
+
+    //     try {
+
+    //         const result = await login({
+    //             email,
+    //             password
+    //         });
+
+    //         console.log(result);
+    //         localStorage.setItem("userID", result.userID);
+    //         localStorage.setItem("name", result.name);
+    //         localStorage.setItem("email", result.email);
+    //         localStorage.setItem("roleID", result.roleID);
+    //         localStorage.setItem("role", result.role);
+    //         alert("Login successful!");
+    //         console.log("Going to dashboard...");
+
+    //         navigate("/dashboard");
+
+    //     }
+    //     catch (error) {
+    //         console.log(error);
+
+    //         if (error.response) {
+    //             console.log("Status:", error.response.status);
+    //             console.log("Data:", error.response.data);
+    //             alert(error.response.data);
+    //         } else {
+    //             alert(error.message);
+    //         }
+    //     }
+
+    // };
+
+    const handleLogin = async (e) => {
+
         e.preventDefault();
+
+        console.log("1. Login button clicked");
 
         try {
 
@@ -20,22 +59,44 @@ function Login() {
                 password
             });
 
-            console.log(result);
+            console.log("2. Login result:", result);
+
+            if (!result.token) {
+                console.error("No token received from backend!");
+                alert("Login failed: No token returned.");
+                return;
+            }
+
+            // Save user information
             localStorage.setItem("token", result.token);
+            localStorage.setItem("userID", result.userID);
+            localStorage.setItem("name", result.name);
+            localStorage.setItem("email", result.email);
             localStorage.setItem("roleID", result.roleID);
+            localStorage.setItem("role", result.role);
+
+            console.log("3. LocalStorage saved");
+
+            console.log("Token:", localStorage.getItem("token"));
+            console.log("Role:", localStorage.getItem("role"));
+
             alert("Login successful!");
+
+            console.log("4. Going to dashboard...");
 
             navigate("/dashboard");
 
         }
         catch (error) {
-            console.log(error);
+
+            console.error("LOGIN ERROR:", error);
 
             if (error.response) {
                 console.log("Status:", error.response.status);
                 console.log("Data:", error.response.data);
                 alert(error.response.data);
-            } else {
+            }
+            else {
                 alert(error.message);
             }
         }

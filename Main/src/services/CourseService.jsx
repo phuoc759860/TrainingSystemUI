@@ -1,7 +1,7 @@
 import api from "../api/axios";
 
-export const getCourses = async () =>
-    await api.get("/Course");
+export const getCourses = (search = "") =>
+    api.get(`/Course?search=${search}`);
 
 export const getCourse = async (id) =>
     await api.get(`/Course/${id}`);

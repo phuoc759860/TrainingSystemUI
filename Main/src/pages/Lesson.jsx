@@ -8,7 +8,7 @@ import {
     deleteLesson
 } from "../services/lessonService";
 
-import { getCourses } from "../services/courseService";
+import { getCourses } from "../services/CourseService";
 
 function Lesson() {
 
@@ -20,6 +20,10 @@ function Lesson() {
 
     const [editingId, setEditingId] = useState(null);
 
+    const [search, setSearch] = useState("");
+
+    const [courseId, setCourseId] = useState("");
+
     const [form, setForm] = useState({
         title: "",
         description: "",
@@ -30,13 +34,11 @@ function Lesson() {
 
         loadLessons();
 
-        loadCourses();
-
-    }, []);
+    }, [search, courseId]);
 
     const loadLessons = async () => {
 
-        const res = await getLessons();
+        const res = await getLessons(search, courseId);
 
         setLessons(res.data);
 
@@ -49,6 +51,10 @@ function Lesson() {
         setCourses(res.data);
 
     };
+
+    useEffect(() => {
+        loadCourses();
+    }, []);
 
     const handleChange = (e) => {
 
@@ -149,6 +155,28 @@ function Lesson() {
             <h2>Lesson Management</h2>
 
             <hr />
+
+            <input
+                placeholder="Search lesson..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+            />
+
+            <select
+                value={courseId}
+                onChange={(e) => setCourseId(e.target.value)}
+            >
+                <option value="">All Courses</option>
+
+                {courses.map(c => (
+                    <option
+                        key={c.courseID}
+                        value={c.courseID}
+                    >
+                        {c.title}
+                    </option>
+                ))}
+            </select>
 
             <input
 

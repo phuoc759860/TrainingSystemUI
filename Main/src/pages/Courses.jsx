@@ -19,6 +19,8 @@ function Course() {
 
     const [trainers, setTrainers] = useState([]);
 
+    const [search, setSearch] = useState("");
+
     const [form, setForm] = useState({
         title: "",
         description: "",
@@ -27,6 +29,9 @@ function Course() {
 
     useEffect(() => {
         loadCourses();
+    }, [search]);
+
+    useEffect(() => {
         loadTrainers();
     }, []);
 
@@ -44,7 +49,7 @@ function Course() {
 
     const loadCourses = async () => {
 
-        const res = await getCourses();
+        const res = await getCourses(search);
 
         setCourses(res.data);
 
@@ -142,6 +147,14 @@ function Course() {
             <h2>Course Management</h2>
 
             <hr />
+            <input
+                type="text"
+                placeholder="Search course..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+            />
+
+            <br /><br />
 
             <input
 
