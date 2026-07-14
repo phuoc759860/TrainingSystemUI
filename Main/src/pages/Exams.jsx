@@ -22,7 +22,8 @@ function Exam() {
 
     const [form, setForm] = useState({
         title: "",
-        courseID: ""
+        courseID: "",
+        questionCount: 5   // NEW — only used when creating
     });
 
     useEffect(() => {
@@ -48,18 +49,32 @@ function Exam() {
     };
 
     const resetForm = () => {
-        setForm({ title: "", courseID: "" });
+        setForm({ title: "", courseID: "", questionCount: 5 });
         setEditingId(null);
     };
 
     const handleSubmit = async () => {
         try {
             if (editingId == null) {
-                await createExam(form);
-                alert("Exam created.");
+                const res = await createExam({
+                    title: form.title,
+                    courseID: form.courseID
+                });
+
+                const count = Math.max(1, Math.min(50, Number(form.questionCount) || 1));
+
+                resetForm();
+
+                // Send the trainer straight into Question Bank to fill in
+                // exactly `count` blank questions for this new exam.
+                navigate(`/questions?examId=${res.data.examID}&count=${count}`);
+                return;
             }
             else {
-                await updateExam(editingId, form);
+                await updateExam(editingId, {
+                    title: form.title,
+                    courseID: form.courseID
+                });
                 alert("Exam updated.");
             }
 
@@ -75,7 +90,8 @@ function Exam() {
         setEditingId(exam.examID);
         setForm({
             title: exam.title,
-            courseID: exam.courseID
+            courseID: exam.courseID,
+            questionCount: 5
         });
     };
 
@@ -129,6 +145,20 @@ function Exam() {
                             </select>
                         </div>
 
+                        {editingId == null && (
+                            <div className="field">
+                                <label>Number of Questions</label>
+                                <input
+                                    type="number"
+                                    name="questionCount"
+                                    min="1"
+                                    max="50"
+                                    value={form.questionCount}
+                                    onChange={handleChange}
+                                />
+                            </div>
+                        )}
+
                     </div>
 
                     <button className="btn btn-primary" onClick={handleSubmit}>
@@ -174,6 +204,12 @@ function Exam() {
 
                                     {canManage && (
                                         <>
+                                            <button
+                                                className="btn btn-outline btn-sm"
+                                                onClick={() => navigate(`/questions?examId=${exam.examID}`)}
+                                            >
+                                                Manage Questions
+                                            </button>{" "}
                                             <button
                                                 className="btn btn-outline btn-sm"
                                                 onClick={() => handleEdit(exam)}

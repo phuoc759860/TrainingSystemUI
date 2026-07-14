@@ -1,5 +1,5 @@
-// Main/src/pages/Question.jsx
 import { useEffect, useState } from "react";
+import { useSearchParams, useNavigate } from "react-router-dom";
 import {
     getQuestions,
     createQuestion,
@@ -10,32 +10,56 @@ import {
 import { getExams } from "../services/ExamService";
 import BackButton from "../components/BackButton";
 
+const blankQuestion = () => ({
+    content: "",
+    questionType: "MultipleChoice",
+    optionA: "",
+    optionB: "",
+    optionC: "",
+    optionD: "",
+    correctAnswer: "",
+    score: 1
+});
+
 function Question() {
+
+    const navigate = useNavigate();
+    const [searchParams] = useSearchParams();
+
+    const preselectedExamId = searchParams.get("examId") || "";
+    const initialCount = Number(searchParams.get("count")) || 0;
 
     const [questions, setQuestions] = useState([]);
     const [exams, setExams] = useState([]);
 
-    const [editingId, setEditingId] = useState(null);
+    // Filter for the table / which exam we're managing
+    const [filterExamId, setFilterExamId] = useState(preselectedExamId);
 
+    // ---- Bulk create mode (triggered by ?examId=X&count=N from Exams.jsx) ----
+    const [bulkMode, setBulkMode] = useState(initialCount > 1);
+    const [bulkForms, setBulkForms] = useState(
+        initialCount > 1 ? Array.from({ length: initialCount }, blankQuestion) : []
+    );
+    const [saving, setSaving] = useState(false);
+
+    // ---- Single add/edit form (existing behavior) ----
+    const [editingId, setEditingId] = useState(null);
     const [form, setForm] = useState({
-        examID: "",
-        content: "",
-        questionType: "MultipleChoice",
-        optionA: "",
-        optionB: "",
-        optionC: "",
-        optionD: "",
-        correctAnswer: "",
-        score: 1
+        examID: preselectedExamId,
+        ...blankQuestion()
     });
 
     useEffect(() => {
-        loadQuestions();
         loadExams();
     }, []);
 
+    useEffect(() => {
+        loadQuestions();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [filterExamId]);
+
     const loadQuestions = async () => {
-        const res = await getQuestions();
+        const res = await getQuestions(filterExamId);
         setQuestions(res.data);
     };
 
@@ -44,6 +68,8 @@ function Question() {
         setExams(res.data);
     };
 
+    // ---------------- Single form handlers (unchanged logic) ----------------
+
     const handleChange = (e) => {
         setForm({
             ...form,
@@ -51,25 +77,28 @@ function Question() {
         });
     };
 
-    const resetForm = () => {
+    const handleTypeChange = (e) => {
         setForm({
-            examID: "",
-            content: "",
-            questionType: "MultipleChoice",
+            ...form,
+            questionType: e.target.value,
             optionA: "",
             optionB: "",
             optionC: "",
             optionD: "",
-            correctAnswer: "",
-            score: 1
+            correctAnswer: ""
+        });
+    };
+
+    const resetForm = () => {
+        setForm({
+            examID: filterExamId,
+            ...blankQuestion()
         });
         setEditingId(null);
     };
 
     const handleSubmit = async () => {
-
         try {
-
             if (editingId == null) {
                 await createQuestion(form);
                 alert("Question created.");
@@ -90,18 +119,14 @@ function Question() {
 
             resetForm();
             loadQuestions();
-
         }
         catch {
             alert("Operation failed.");
         }
-
     };
 
     const handleEdit = (question) => {
-
         setEditingId(question.questionID);
-
         setForm({
             examID: question.examID,
             content: question.content,
@@ -113,18 +138,92 @@ function Question() {
             correctAnswer: question.correctAnswer,
             score: question.score
         });
-
     };
 
     const handleDelete = async (id) => {
-
         if (!window.confirm("Delete question?"))
             return;
 
         await deleteQuestion(id);
         loadQuestions();
-
     };
+
+    // ---------------- Bulk form handlers ----------------
+
+    const handleBulkFieldChange = (index, field, value) => {
+        setBulkForms(prev => {
+            const updated = [...prev];
+            updated[index] = { ...updated[index], [field]: value };
+            return updated;
+        });
+    };
+
+    const handleBulkTypeChange = (index, value) => {
+        setBulkForms(prev => {
+            const updated = [...prev];
+            updated[index] = {
+                ...updated[index],
+                questionType: value,
+                optionA: "",
+                optionB: "",
+                optionC: "",
+                optionD: "",
+                correctAnswer: ""
+            };
+            return updated;
+        });
+    };
+
+    const handleBulkSubmit = async () => {
+        if (!filterExamId) {
+            alert("No exam selected.");
+            return;
+        }
+
+        const hasEmpty = bulkForms.some(q => q.content.trim() === "");
+        if (hasEmpty) {
+            if (!window.confirm("Some questions have no text. Save anyway?")) {
+                return;
+            }
+        }
+
+        setSaving(true);
+
+        try {
+            for (const q of bulkForms) {
+                await createQuestion({
+                    ...q,
+                    examID: filterExamId,
+                    score: Number(q.score) || 1
+                });
+            }
+
+            alert(`${bulkForms.length} question(s) created.`);
+            setBulkMode(false);
+            setBulkForms([]);
+            navigate(`/questions?examId=${filterExamId}`, { replace: true });
+            loadQuestions();
+        }
+        catch (err) {
+            console.log(err);
+            alert("Some questions failed to save. Check the list below — anything missing can be added with the form.");
+            loadQuestions();
+        }
+        finally {
+            setSaving(false);
+        }
+    };
+
+    const cancelBulk = () => {
+        if (!window.confirm("Discard these unsaved questions?"))
+            return;
+
+        setBulkMode(false);
+        setBulkForms([]);
+        navigate(`/questions${filterExamId ? `?examId=${filterExamId}` : ""}`, { replace: true });
+    };
+
+    const selectedExamTitle = exams.find(e => String(e.examID) === String(filterExamId))?.title;
 
     return (
 
@@ -137,18 +236,19 @@ function Question() {
                 </div>
             </div>
 
+            {/* Exam selector — always visible, drives both the table and the single-add form */}
             <div className="card" style={{ marginBottom: 24 }}>
                 <div className="form-grid">
-
                     <div className="field">
                         <label>Exam</label>
                         <select
-                            name="examID"
-                            value={form.examID}
-                            onChange={handleChange}
-                            disabled={editingId != null}
+                            value={filterExamId}
+                            onChange={(e) => {
+                                setFilterExamId(e.target.value);
+                                setForm(f => ({ ...f, examID: e.target.value }));
+                            }}
                         >
-                            <option value="">Select Exam</option>
+                            <option value="">All Exams</option>
                             {
                                 exams.map(exam => (
                                     <option key={exam.examID} value={exam.examID}>
@@ -158,76 +258,237 @@ function Question() {
                             }
                         </select>
                     </div>
-
-                    <div className="field">
-                        <label>Question Type</label>
-                        <select
-                            name="questionType"
-                            value={form.questionType}
-                            onChange={handleChange}
-                        >
-                            <option value="MultipleChoice">Multiple Choice</option>
-                            <option value="Essay">Essay</option>
-                        </select>
-                    </div>
-
-                    <div className="field" style={{ gridColumn: "1 / -1" }}>
-                        <label>Question</label>
-                        <textarea
-                            name="content"
-                            rows="2"
-                            placeholder="Question text"
-                            value={form.content}
-                            onChange={handleChange}
-                        />
-                    </div>
-
-                    <div className="field">
-                        <label>Option A</label>
-                        <input name="optionA" placeholder="Option A" value={form.optionA} onChange={handleChange} />
-                    </div>
-
-                    <div className="field">
-                        <label>Option B</label>
-                        <input name="optionB" placeholder="Option B" value={form.optionB} onChange={handleChange} />
-                    </div>
-
-                    <div className="field">
-                        <label>Option C</label>
-                        <input name="optionC" placeholder="Option C" value={form.optionC} onChange={handleChange} />
-                    </div>
-
-                    <div className="field">
-                        <label>Option D</label>
-                        <input name="optionD" placeholder="Option D" value={form.optionD} onChange={handleChange} />
-                    </div>
-
-                    <div className="field">
-                        <label>Correct Answer</label>
-                        <input name="correctAnswer" placeholder="Correct Answer" value={form.correctAnswer} onChange={handleChange} />
-                    </div>
-
-                    <div className="field">
-                        <label>Score</label>
-                        <input type="number" name="score" placeholder="Score" value={form.score} onChange={handleChange} />
-                    </div>
-
                 </div>
+            </div>
 
-                <button className="btn btn-primary" onClick={handleSubmit}>
-                    {editingId == null ? "Add Question" : "Update Question"}
-                </button>
+            {/* -------- Bulk fill-in form (only right after creating an exam) -------- */}
+            {bulkMode && (
+                <div className="card" style={{ marginBottom: 24 }}>
+                    <h3 style={{ marginTop: 0 }}>
+                        Add {bulkForms.length} Question{bulkForms.length > 1 ? "s" : ""}
+                        {selectedExamTitle ? ` for "${selectedExamTitle}"` : ""}
+                    </h3>
 
-                {editingId != null && (
-                    <button
-                        className="btn btn-outline"
-                        style={{ marginLeft: 8 }}
-                        onClick={resetForm}
-                    >
+                    {bulkForms.map((q, i) => (
+                        <div
+                            key={i}
+                            className="card"
+                            style={{ marginBottom: 16, background: "var(--surface-alt)" }}
+                        >
+                            <p style={{ fontWeight: 600, marginBottom: 10 }}>Question {i + 1}</p>
+
+                            <div className="form-grid">
+
+                                <div className="field">
+                                    <label>Question Type</label>
+                                    <select
+                                        value={q.questionType}
+                                        onChange={(e) => handleBulkTypeChange(i, e.target.value)}
+                                    >
+                                        <option value="MultipleChoice">Multiple Choice</option>
+                                        <option value="Essay">Essay</option>
+                                    </select>
+                                </div>
+
+                                <div className="field">
+                                    <label>Score</label>
+                                    <input
+                                        type="number"
+                                        min="1"
+                                        value={q.score}
+                                        onChange={(e) => handleBulkFieldChange(i, "score", e.target.value)}
+                                    />
+                                </div>
+
+                                <div className="field" style={{ gridColumn: "1 / -1" }}>
+                                    <label>Question</label>
+                                    <textarea
+                                        rows="2"
+                                        placeholder="Question text"
+                                        value={q.content}
+                                        onChange={(e) => handleBulkFieldChange(i, "content", e.target.value)}
+                                    />
+                                </div>
+
+                                {q.questionType === "MultipleChoice" && (
+                                    <>
+                                        <div className="field">
+                                            <label>Option A</label>
+                                            <input
+                                                value={q.optionA}
+                                                onChange={(e) => handleBulkFieldChange(i, "optionA", e.target.value)}
+                                            />
+                                        </div>
+                                        <div className="field">
+                                            <label>Option B</label>
+                                            <input
+                                                value={q.optionB}
+                                                onChange={(e) => handleBulkFieldChange(i, "optionB", e.target.value)}
+                                            />
+                                        </div>
+                                        <div className="field">
+                                            <label>Option C</label>
+                                            <input
+                                                value={q.optionC}
+                                                onChange={(e) => handleBulkFieldChange(i, "optionC", e.target.value)}
+                                            />
+                                        </div>
+                                        <div className="field">
+                                            <label>Option D</label>
+                                            <input
+                                                value={q.optionD}
+                                                onChange={(e) => handleBulkFieldChange(i, "optionD", e.target.value)}
+                                            />
+                                        </div>
+                                        <div className="field">
+                                            <label>Correct Answer</label>
+                                            <select
+                                                value={q.correctAnswer}
+                                                onChange={(e) => handleBulkFieldChange(i, "correctAnswer", e.target.value)}
+                                            >
+                                                <option value="">Select correct option</option>
+                                                <option value="A">A</option>
+                                                <option value="B">B</option>
+                                                <option value="C">C</option>
+                                                <option value="D">D</option>
+                                            </select>
+                                        </div>
+                                    </>
+                                )}
+
+                                {q.questionType === "Essay" && (
+                                    <div className="field" style={{ gridColumn: "1 / -1" }}>
+                                        <label>Model Answer / Grading Notes (optional)</label>
+                                        <textarea
+                                            rows="2"
+                                            placeholder="Optional notes for the grader — not shown to students"
+                                            value={q.correctAnswer}
+                                            onChange={(e) => handleBulkFieldChange(i, "correctAnswer", e.target.value)}
+                                        />
+                                    </div>
+                                )}
+
+                            </div>
+                        </div>
+                    ))}
+
+                    <button className="btn btn-primary" onClick={handleBulkSubmit} disabled={saving}>
+                        {saving ? "Saving..." : `Save All ${bulkForms.length} Questions`}
+                    </button>{" "}
+                    <button className="btn btn-outline" onClick={cancelBulk} disabled={saving}>
                         Cancel
                     </button>
-                )}
-            </div>
+                </div>
+            )}
+
+            {/* -------- Single add/edit form (still available for adding one-offs later) -------- */}
+            {!bulkMode && (
+                <div className="card" style={{ marginBottom: 24 }}>
+                    <div className="form-grid">
+
+                        <div className="field">
+                            <label>Exam</label>
+                            <select
+                                name="examID"
+                                value={form.examID}
+                                onChange={handleChange}
+                                disabled={editingId != null}
+                            >
+                                <option value="">Select Exam</option>
+                                {
+                                    exams.map(exam => (
+                                        <option key={exam.examID} value={exam.examID}>
+                                            {exam.title}
+                                        </option>
+                                    ))
+                                }
+                            </select>
+                        </div>
+
+                        <div className="field">
+                            <label>Question Type</label>
+                            <select
+                                name="questionType"
+                                value={form.questionType}
+                                onChange={handleTypeChange}
+                            >
+                                <option value="MultipleChoice">Multiple Choice</option>
+                                <option value="Essay">Essay</option>
+                            </select>
+                        </div>
+
+                        <div className="field" style={{ gridColumn: "1 / -1" }}>
+                            <label>Question</label>
+                            <textarea
+                                name="content"
+                                rows="2"
+                                placeholder="Question text"
+                                value={form.content}
+                                onChange={handleChange}
+                            />
+                        </div>
+
+                        {form.questionType === "MultipleChoice" && (
+                            <>
+                                <div className="field">
+                                    <label>Option A</label>
+                                    <input name="optionA" placeholder="Option A" value={form.optionA} onChange={handleChange} />
+                                </div>
+                                <div className="field">
+                                    <label>Option B</label>
+                                    <input name="optionB" placeholder="Option B" value={form.optionB} onChange={handleChange} />
+                                </div>
+                                <div className="field">
+                                    <label>Option C</label>
+                                    <input name="optionC" placeholder="Option C" value={form.optionC} onChange={handleChange} />
+                                </div>
+                                <div className="field">
+                                    <label>Option D</label>
+                                    <input name="optionD" placeholder="Option D" value={form.optionD} onChange={handleChange} />
+                                </div>
+                                <div className="field">
+                                    <label>Correct Answer</label>
+                                    <select name="correctAnswer" value={form.correctAnswer} onChange={handleChange}>
+                                        <option value="">Select correct option</option>
+                                        <option value="A">A</option>
+                                        <option value="B">B</option>
+                                        <option value="C">C</option>
+                                        <option value="D">D</option>
+                                    </select>
+                                </div>
+                            </>
+                        )}
+
+                        {form.questionType === "Essay" && (
+                            <div className="field" style={{ gridColumn: "1 / -1" }}>
+                                <label>Model Answer / Grading Notes (optional)</label>
+                                <textarea
+                                    name="correctAnswer"
+                                    rows="2"
+                                    placeholder="Optional notes for the grader — not shown to students"
+                                    value={form.correctAnswer}
+                                    onChange={handleChange}
+                                />
+                            </div>
+                        )}
+
+                    </div>
+
+                    <button className="btn btn-primary" onClick={handleSubmit}>
+                        {editingId == null ? "Add Question" : "Update Question"}
+                    </button>
+
+                    {editingId != null && (
+                        <button
+                            className="btn btn-outline"
+                            style={{ marginLeft: 8 }}
+                            onClick={resetForm}
+                        >
+                            Cancel
+                        </button>
+                    )}
+                </div>
+            )}
 
             <table className="table-modern">
 

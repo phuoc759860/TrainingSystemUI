@@ -59,7 +59,7 @@ function Dashboard() {
                 <div className="stat-card"><div className="num">{stats.totalResults ?? "–"}</div><div className="label">Results</div></div>
             </div>
 
-            <h3 style={{ marginBottom: 14 }}>Modules</h3>
+            <h3 style={{ marginBottom: 14 }}>Sections</h3>
             <div className="module-grid">
                 {modules.filter(m => m.roles.includes(role)).map(m => (
                     <button key={m.path} className="module-card" onClick={() => navigate(m.path)}>
