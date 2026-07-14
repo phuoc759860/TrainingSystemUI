@@ -35,6 +35,7 @@ function Dashboard() {
         { label: "Exams", path: "/exams", roles: ["Admin", "Trainer", "Student"] },
         { label: "Question Bank", path: "/questions", roles: ["Admin", "Trainer"] },
         { label: "Exam Results", path: "/ExamResult", roles: ["Admin", "Trainer"] },
+        { label: "Statistics", path: "/statistics", roles: ["Admin", "Trainer"] },
     ];
 
     return (

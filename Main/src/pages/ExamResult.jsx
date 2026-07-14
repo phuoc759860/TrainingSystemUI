@@ -3,6 +3,12 @@ import { useNavigate } from "react-router-dom";
 import { getExamResults, createExamResult, updateExamResult, deleteExamResult } from "../services/ExamResultService";
 import { getUsers } from "../services/UserService";
 import { getExams } from "../services/ExamService";
+import BackButton from "../components/BackButton";
+import ConfirmDialog from "../components/ConfirmDialog";
+import Toast from "../components/Toast";
+import SidePanel from "../components/SidePanel";
+
+const blankForm = () => ({ userID: "", examID: "", score: "" });
 
 function ExamResult() {
     const navigate = useNavigate();
@@ -10,91 +16,188 @@ function ExamResult() {
     const [users, setUsers] = useState([]);
     const [exams, setExams] = useState([]);
     const [editingId, setEditingId] = useState(null);
-    const [form, setForm] = useState({ userID: "", examID: "", score: "" });
+    const [loading, setLoading] = useState(true);
+    const [saving, setSaving] = useState(false);
+    const [panelOpen, setPanelOpen] = useState(false);
+    const [confirmState, setConfirmState] = useState(null);
+    const [toast, setToast] = useState(null);
+    const [form, setForm] = useState(blankForm());
 
     useEffect(() => { loadResults(); loadUsers(); loadExams(); }, []);
-    const loadResults = async () => setResults((await getExamResults()).data);
+
+    const loadResults = async () => {
+        setLoading(true);
+        try {
+            const res = await getExamResults();
+            setResults(res.data);
+        }
+        catch {
+            setToast({ message: "Couldn't load exam results. Try refreshing.", type: "error" });
+        }
+        finally {
+            setLoading(false);
+        }
+    };
     const loadUsers = async () => setUsers((await getUsers()).data);
     const loadExams = async () => setExams((await getExams()).data);
 
     const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
 
+    const closePanel = () => {
+        setPanelOpen(false);
+        setEditingId(null);
+        setForm(blankForm());
+    };
+
+    const openCreatePanel = () => {
+        setEditingId(null);
+        setForm(blankForm());
+        setPanelOpen(true);
+    };
+
+    const openEditPanel = (r) => {
+        setEditingId(r.resultID);
+        setForm({ userID: r.userID, examID: r.examID, score: r.score });
+        setPanelOpen(true);
+    };
+
     const handleSubmit = async () => {
+        if (!form.userID || !form.examID || form.score === "") {
+            setToast({ message: "User, exam, and score are required.", type: "error" });
+            return;
+        }
+
+        setSaving(true);
+
         try {
             const data = { userID: Number(form.userID), examID: Number(form.examID), score: Number(form.score) };
-            if (editingId == null) { await createExamResult(data); alert("Result created."); }
-            else { await updateExamResult(editingId, data); alert("Result updated."); }
-            setEditingId(null);
-            setForm({ userID: "", examID: "", score: "" });
+            if (editingId == null) {
+                await createExamResult(data);
+                setToast({ message: "Result created.", type: "success" });
+            }
+            else {
+                await updateExamResult(editingId, data);
+                setToast({ message: "Result updated.", type: "success" });
+            }
+            closePanel();
             loadResults();
         } catch (err) {
             console.log(err.response?.data);
-            alert("Operation failed.");
+            setToast({ message: "Operation failed.", type: "error" });
+        } finally {
+            setSaving(false);
         }
     };
 
-    const handleEdit = (r) => { setEditingId(r.resultID); setForm({ userID: r.userID, examID: r.examID, score: r.score }); };
-    const handleDelete = async (id) => { if (!window.confirm("Delete result?")) return; await deleteExamResult(id); loadResults(); };
+    const handleDelete = (r) => {
+        setConfirmState({
+            title: "Delete this result?",
+            message: "This can't be undone.",
+            confirmLabel: "Delete result",
+            danger: true,
+            onConfirm: async () => {
+                try {
+                    await deleteExamResult(r.resultID);
+                    setToast({ message: "Result deleted.", type: "success" });
+                    loadResults();
+                }
+                catch {
+                    setToast({ message: "Couldn't delete that result.", type: "error" });
+                }
+            }
+        });
+    };
 
     return (
         <div className="page">
             <div className="page-header">
                 <div>
-                    <button className="btn btn-outline btn-sm" onClick={() => navigate("/dashboard")}>← Back</button>
+                    <BackButton />
                     <h2 style={{ marginTop: 12 }}>Exam Result Management</h2>
                 </div>
-            </div>
 
-            <div className="card" style={{ marginBottom: 24 }}>
-                <div className="form-grid">
-                    <div className="field">
-                        <label>User</label>
-                        <select name="userID" value={form.userID} onChange={handleChange}>
-                            <option value="">Select User</option>
-                            {users.map(u => <option key={u.userID} value={u.userID}>{u.name}</option>)}
-                        </select>
-                    </div>
-                    <div className="field">
-                        <label>Exam</label>
-                        <select name="examID" value={form.examID} onChange={handleChange}>
-                            <option value="">Select Exam</option>
-                            {exams.map(e => <option key={e.examID} value={e.examID}>{e.title}</option>)}
-                        </select>
-                    </div>
-                    <div className="field">
-                        <label>Score</label>
-                        <input type="number" name="score" min="0" max="100" placeholder="0–100" value={form.score} onChange={handleChange} />
-                    </div>
-                </div>
-                <button className="btn btn-primary" onClick={handleSubmit}>
-                    {editingId == null ? "Add Result" : "Update Result"}
+                <button className="btn btn-primary" onClick={openCreatePanel}>
+                    + New Result
                 </button>
             </div>
 
-            <table className="table-modern">
-                <thead><tr><th>ID</th><th>User</th><th>Exam</th><th>Score</th><th>Status</th><th>Grading</th><th>Submitted</th><th></th></tr></thead>
-                <tbody>
-                    {results.map(r => (
-                        <tr key={r.resultID}>
-                            <td>{r.resultID}</td><td>{r.userName}</td><td>{r.examTitle}</td><td>{r.score}</td>
-                            <td><span className={`badge ${r.passed ? "badge-success" : "badge-danger"}`}>{r.passed ? "Passed" : "Failed"}</span></td>
-                            <td>
-                                {r.needsGrading
-                                    ? <span className="badge badge-danger">Needs Grading</span>
-                                    : <span className="badge badge-success">Graded</span>}
-                            </td>
-                            <td>{new Date(r.submittedAt).toLocaleString()}</td>
-                            <td>
-                                <button className="btn btn-outline btn-sm" onClick={() => navigate(`/exam-results/${r.resultID}/grade`)}>
-                                    {r.needsGrading ? "Grade" : "View"}
-                                </button>{" "}
-                                <button className="btn btn-outline btn-sm" onClick={() => handleEdit(r)}>Edit</button>{" "}
-                                <button className="btn btn-danger btn-sm" onClick={() => handleDelete(r.resultID)}>Delete</button>
-                            </td>
-                        </tr>
-                    ))}
-                </tbody>
-            </table>
+            {loading ? (
+                <div className="loading-row">
+                    <span className="spinner" /> Loading results...
+                </div>
+            ) : results.length === 0 ? (
+                <div className="card empty-state">
+                    <div className="empty-icon">📊</div>
+                    <p>No exam results yet.</p>
+                </div>
+            ) : (
+                <table className="table-modern fade-in">
+                    <thead><tr><th>ID</th><th>User</th><th>Exam</th><th>Score</th><th>Status</th><th>Grading</th><th>Submitted</th><th></th></tr></thead>
+                    <tbody>
+                        {results.map(r => (
+                            <tr key={r.resultID}>
+                                <td>{r.resultID}</td><td>{r.userName}</td><td>{r.examTitle}</td><td>{r.score}</td>
+                                <td><span className={`badge ${r.passed ? "badge-success" : "badge-danger"}`}>{r.passed ? "Passed" : "Failed"}</span></td>
+                                <td>
+                                    {r.needsGrading
+                                        ? <span className="badge badge-danger">Needs Grading</span>
+                                        : <span className="badge badge-success">Graded</span>}
+                                </td>
+                                <td>{new Date(r.submittedAt).toLocaleString()}</td>
+                                <td style={{ whiteSpace: "nowrap" }}>
+                                    <button className="btn btn-outline btn-sm" onClick={() => navigate(`/exam-results/${r.resultID}/grade`)}>
+                                        {r.needsGrading ? "Grade" : "View"}
+                                    </button>{" "}
+                                    <button className="btn btn-outline btn-sm" onClick={() => openEditPanel(r)}>Edit</button>{" "}
+                                    <button className="btn btn-danger btn-sm" onClick={() => handleDelete(r)}>Delete</button>
+                                </td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            )}
+
+            <SidePanel
+                open={panelOpen}
+                title={editingId == null ? "Add Result" : "Edit Result"}
+                subtitle={editingId != null ? "Manually adjusting a submitted result" : undefined}
+                onClose={closePanel}
+                footer={
+                    <>
+                        <button className="btn btn-outline" onClick={closePanel} disabled={saving}>
+                            Cancel
+                        </button>
+                        <button className="btn btn-primary" onClick={handleSubmit} disabled={saving}>
+                            {saving && <span className="spinner" />}
+                            {editingId == null
+                                ? (saving ? "Adding..." : "Add Result")
+                                : (saving ? "Saving..." : "Save Changes")}
+                        </button>
+                    </>
+                }
+            >
+                <div className="field" style={{ marginBottom: 16 }}>
+                    <label>User</label>
+                    <select name="userID" value={form.userID} onChange={handleChange}>
+                        <option value="">Select User</option>
+                        {users.map(u => <option key={u.userID} value={u.userID}>{u.name}</option>)}
+                    </select>
+                </div>
+                <div className="field" style={{ marginBottom: 16 }}>
+                    <label>Exam</label>
+                    <select name="examID" value={form.examID} onChange={handleChange}>
+                        <option value="">Select Exam</option>
+                        {exams.map(e => <option key={e.examID} value={e.examID}>{e.title}</option>)}
+                    </select>
+                </div>
+                <div className="field">
+                    <label>Score</label>
+                    <input type="number" name="score" min="0" max="100" placeholder="0–100" value={form.score} onChange={handleChange} />
+                </div>
+            </SidePanel>
+
+            <ConfirmDialog state={confirmState} onClose={() => setConfirmState(null)} />
+            <Toast toast={toast} onDone={() => setToast(null)} />
         </div>
     );
 }

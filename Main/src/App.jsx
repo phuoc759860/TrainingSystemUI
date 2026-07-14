@@ -16,6 +16,7 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import "./styles/theme.css";
 import "./index.css";
 import GradeAttempt from "./pages/GradeAttempt";
+import Statistics from "./pages/Statistics";
 
 
 function App() {
@@ -127,6 +128,14 @@ function App() {
                     element={
                         <ProtectedRoute roles={["Admin", "Trainer"]}>
                             <GradeAttempt />
+                        </ProtectedRoute>
+                    }
+                />
+                <Route
+                    path="/statistics"
+                    element={
+                        <ProtectedRoute roles={["Admin", "Trainer"]}>
+                            <Statistics />
                         </ProtectedRoute>
                     }
                 />
