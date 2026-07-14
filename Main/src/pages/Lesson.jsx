@@ -7,6 +7,15 @@ import {
 } from "../services/LessonService";
 import { getCourses } from "../services/CourseService";
 import BackButton from "../components/BackButton";
+import ConfirmDialog from "../components/ConfirmDialog";
+import Toast from "../components/Toast";
+import SidePanel from "../components/SidePanel";
+
+const blankForm = () => ({
+    title: "",
+    description: "",
+    courseID: ""
+});
 
 function Lesson() {
 
@@ -15,17 +24,19 @@ function Lesson() {
     const [editingId, setEditingId] = useState(null);
     const [search, setSearch] = useState("");
     const [courseId, setCourseId] = useState("");
+    const [loading, setLoading] = useState(true);
+    const [saving, setSaving] = useState(false);
+    const [panelOpen, setPanelOpen] = useState(false);
+    const [confirmState, setConfirmState] = useState(null);
+    const [toast, setToast] = useState(null);
     const role = localStorage.getItem("role");
     const canManage = role === "Admin" || role === "Trainer";
 
-    const [form, setForm] = useState({
-        title: "",
-        description: "",
-        courseID: ""
-    });
+    const [form, setForm] = useState(blankForm());
 
     useEffect(() => {
         loadLessons();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [search, courseId]);
 
     useEffect(() => {
@@ -33,8 +44,17 @@ function Lesson() {
     }, []);
 
     const loadLessons = async () => {
-        const res = await getLessons(search, courseId);
-        setLessons(res.data);
+        setLoading(true);
+        try {
+            const res = await getLessons(search, courseId);
+            setLessons(res.data);
+        }
+        catch {
+            setToast({ message: "Couldn't load lessons. Try refreshing.", type: "error" });
+        }
+        finally {
+            setLoading(false);
+        }
     };
 
     const loadCourses = async () => {
@@ -49,55 +69,77 @@ function Lesson() {
         });
     };
 
-    const resetForm = () => {
-        setForm({ title: "", description: "", courseID: "" });
+    const closePanel = () => {
+        setPanelOpen(false);
         setEditingId(null);
+        setForm(blankForm());
     };
 
-    const handleSubmit = async () => {
-
-        try {
-
-            if (editingId == null) {
-                await createLesson(form);
-                alert("Lesson created.");
-            }
-            else {
-                await updateLesson(editingId, form);
-                alert("Lesson updated.");
-            }
-
-            resetForm();
-            loadLessons();
-
-        }
-        catch (err) {
-            console.log(err);
-            alert("Operation failed.");
-        }
-
+    const openCreatePanel = () => {
+        setEditingId(null);
+        setForm(blankForm());
+        setPanelOpen(true);
     };
 
-    const handleEdit = (lesson) => {
-
+    const openEditPanel = (lesson) => {
         setEditingId(lesson.lessonID);
-
         setForm({
             title: lesson.title,
             description: lesson.description,
             courseID: lesson.courseID
         });
-
+        setPanelOpen(true);
     };
 
-    const handleDelete = async (id) => {
-
-        if (!window.confirm("Delete this lesson?"))
+    const handleSubmit = async () => {
+        if (!form.title.trim() || !form.courseID) {
+            setToast({ message: "Title and course are required.", type: "error" });
             return;
+        }
 
-        await deleteLesson(id);
-        loadLessons();
+        setSaving(true);
 
+        try {
+
+            if (editingId == null) {
+                await createLesson(form);
+                setToast({ message: "Lesson created.", type: "success" });
+            }
+            else {
+                await updateLesson(editingId, form);
+                setToast({ message: "Lesson updated.", type: "success" });
+            }
+
+            closePanel();
+            loadLessons();
+
+        }
+        catch (err) {
+            console.log(err);
+            setToast({ message: "Operation failed.", type: "error" });
+        }
+        finally {
+            setSaving(false);
+        }
+    };
+
+    const handleDelete = (lesson) => {
+        setConfirmState({
+            title: `Delete "${lesson.title}"?`,
+            message: "This can't be undone.",
+            confirmLabel: "Delete lesson",
+            danger: true,
+            onConfirm: async () => {
+                try {
+                    await deleteLesson(lesson.lessonID);
+                    setToast({ message: "Lesson deleted.", type: "success" });
+                    loadLessons();
+                }
+                catch {
+                    setToast({ message: "Couldn't delete that lesson.", type: "error" });
+                }
+            }
+        });
     };
 
     return (
@@ -109,9 +151,15 @@ function Lesson() {
                     <BackButton />
                     <h2 style={{ marginTop: 12 }}>Lesson Management</h2>
                 </div>
+
+                {canManage && (
+                    <button className="btn btn-primary" onClick={openCreatePanel}>
+                        + New Lesson
+                    </button>
+                )}
             </div>
 
-            <div className="card" style={{ marginBottom: 24 }}>
+            <div className="card fade-in" style={{ marginBottom: 24 }}>
                 <div className="form-grid">
                     <div className="field">
                         <label>Search</label>
@@ -139,113 +187,120 @@ function Lesson() {
                 </div>
             </div>
 
-            <div className="card" style={{ marginBottom: 24 }}>
-                <div className="form-grid">
+            {loading ? (
+                <div className="loading-row">
+                    <span className="spinner" /> Loading lessons...
+                </div>
+            ) : lessons.length === 0 ? (
+                <div className="card empty-state">
+                    <div className="empty-icon">📘</div>
+                    <p>
+                        {search || courseId
+                            ? "No lessons match your filters."
+                            : "No lessons yet. Create one to get started."}
+                    </p>
+                </div>
+            ) : (
+                <table className="table-modern fade-in">
 
-                    <div className="field">
-                        <label>Lesson Title</label>
-                        <input
-                            name="title"
-                            placeholder="Lesson Title"
-                            value={form.title}
-                            onChange={handleChange}
-                        />
-                    </div>
+                    <thead>
+                        <tr>
+                            <th>Title</th>
+                            <th>Description</th>
+                            <th>Course</th>
+                            <th></th>
+                        </tr>
+                    </thead>
 
-                    <div className="field">
-                        <label>Description</label>
-                        <textarea
-                            name="description"
-                            rows="3"
-                            placeholder="Description"
-                            value={form.description}
-                            onChange={handleChange}
-                        />
-                    </div>
+                    <tbody>
+                        {
+                            lessons.map(lesson => (
+                                <tr key={lesson.lessonID}>
+                                    <td style={{ fontWeight: 500 }}>{lesson.title}</td>
+                                    <td>{lesson.description}</td>
+                                    <td><span className="pill pill-mc">{lesson.courseTitle}</span></td>
+                                    <td style={{ whiteSpace: "nowrap" }}>
+                                        {canManage && (
+                                            <>
+                                                <button className="btn btn-outline btn-sm" onClick={() => openEditPanel(lesson)}>
+                                                    Edit
+                                                </button>{" "}
+                                                <button className="btn btn-danger btn-sm" onClick={() => handleDelete(lesson)}>
+                                                    Delete
+                                                </button>
+                                            </>
+                                        )}
+                                    </td>
+                                </tr>
+                            ))
+                        }
+                    </tbody>
 
-                    <div className="field">
-                        <label>Course</label>
-                        <select
-                            name="courseID"
-                            value={form.courseID}
-                            onChange={handleChange}
-                        >
-                            <option value="">Select Course</option>
-                            {
-                                courses.map(course => (
-                                    <option key={course.courseID} value={course.courseID}>
-                                        {course.title}
-                                    </option>
-                                ))
-                            }
-                        </select>
-                    </div>
+                </table>
+            )}
 
+            <SidePanel
+                open={panelOpen}
+                title={editingId == null ? "Add Lesson" : "Edit Lesson"}
+                subtitle={editingId != null ? `Editing "${form.title}"` : undefined}
+                onClose={closePanel}
+                footer={
+                    <>
+                        <button className="btn btn-outline" onClick={closePanel} disabled={saving}>
+                            Cancel
+                        </button>
+                        <button className="btn btn-primary" onClick={handleSubmit} disabled={saving}>
+                            {saving && <span className="spinner" />}
+                            {editingId == null
+                                ? (saving ? "Adding..." : "Add Lesson")
+                                : (saving ? "Saving..." : "Save Changes")}
+                        </button>
+                    </>
+                }
+            >
+                <div className="field" style={{ marginBottom: 16 }}>
+                    <label>Lesson Title</label>
+                    <input
+                        name="title"
+                        placeholder="Lesson Title"
+                        value={form.title}
+                        onChange={handleChange}
+                        autoFocus
+                    />
                 </div>
 
-                {canManage && (
-                    <div className="card" style={{ marginBottom: 24 }}>
-                        {/* ...existing form-grid... */}
-                        <button className="btn btn-primary" onClick={handleSubmit}>
-                            {editingId == null ? "Add Course" : "Update Course"}
-                        </button>
-                        {editingId != null && (
-                            <button className="btn btn-outline" style={{ marginLeft: 8 }} onClick={resetForm}>
-                                Cancel
-                            </button>
-                        )}
-                    </div>
-                )}
+                <div className="field" style={{ marginBottom: 16 }}>
+                    <label>Description</label>
+                    <textarea
+                        name="description"
+                        rows="3"
+                        placeholder="Description"
+                        value={form.description}
+                        onChange={handleChange}
+                    />
+                </div>
 
-                {editingId != null && (
-                    <button
-                        className="btn btn-outline"
-                        style={{ marginLeft: 8 }}
-                        onClick={resetForm}
+                <div className="field">
+                    <label>Course</label>
+                    <select
+                        name="courseID"
+                        value={form.courseID}
+                        onChange={handleChange}
                     >
-                        Cancel
-                    </button>
-                )}
-            </div>
+                        <option value="">Select Course</option>
+                        {
+                            courses.map(course => (
+                                <option key={course.courseID} value={course.courseID}>
+                                    {course.title}
+                                </option>
+                            ))
+                        }
+                    </select>
+                </div>
+            </SidePanel>
 
-            <table className="table-modern">
-
-                <thead>
-                    <tr>
-                        <th>ID</th>
-                        <th>Title</th>
-                        <th>Description</th>
-                        <th>Course</th>
-                        <th></th>
-                    </tr>
-                </thead>
-
-                <tbody>
-                    {
-                        lessons.map(lesson => (
-                            <tr key={lesson.lessonID}>
-                                <td>{lesson.lessonID}</td>
-                                <td>{lesson.title}</td>
-                                <td>{lesson.description}</td>
-                                <td>{lesson.courseTitle}</td>
-                                <td>
-                                    {canManage && (
-                                        <>
-                                            <button className="btn btn-outline btn-sm" onClick={() => handleEdit(course)}>
-                                                Edit
-                                            </button>{" "}
-                                            <button className="btn btn-danger btn-sm" onClick={() => handleDelete(course.courseID)}>
-                                                Delete
-                                            </button>
-                                        </>
-                                    )}
-                                </td>
-                            </tr>
-                        ))
-                    }
-                </tbody>
-
-            </table>
+            <ConfirmDialog state={confirmState} onClose={() => setConfirmState(null)} />
+            <Toast toast={toast} onDone={() => setToast(null)} />
 
         </div>
 

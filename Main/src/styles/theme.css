@@ -55,3 +55,241 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--surface
 .module-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:16px; }
 .module-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:20px; cursor:pointer; text-align:left; font-size:14px; font-weight:500; transition:.15s; }
 .module-card:hover { border-color:var(--brand); transform:translateY(-2px); box-shadow:var(--shadow); }
+
+.card { transition: box-shadow .2s ease, transform .15s ease; }
+.table-modern tr td { transition: background-color .12s ease; }
+.btn { transition: background-color .15s ease, transform .05s ease, box-shadow .15s ease; }
+.btn:active { transform: translateY(1px); }
+.module-card { transition: border-color .15s ease, transform .15s ease, box-shadow .15s ease; }
+
+.modal-backdrop {
+  position: fixed; inset: 0;
+  background: rgba(30, 27, 46, .45);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 1000;
+  animation: fadeIn .15s ease;
+}
+.modal-card {
+  background: var(--surface);
+  border-radius: var(--radius);
+  box-shadow: 0 10px 40px rgba(30,27,46,.25);
+  padding: 24px;
+  width: 360px;
+  max-width: calc(100vw - 32px);
+  animation: popIn .16s ease;
+}
+.modal-title { margin: 0 0 8px; font-size: 17px; font-weight: 600; }
+.modal-message { margin: 0 0 20px; color: var(--ink-soft); font-size: 14px; line-height: 1.5; }
+.modal-actions { display: flex; justify-content: flex-end; gap: 8px; }
+
+.btn-danger-solid { background: var(--danger); color: #fff; }
+.btn-danger-solid:hover { background: #b91c1c; }
+
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes popIn { from { opacity: 0; transform: scale(.96) translateY(4px); } to { opacity: 1; transform: scale(1) translateY(0); } }
+
+.toast {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 12px 20px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  box-shadow: 0 6px 20px rgba(30,27,46,.2);
+  z-index: 1100;
+  animation: toastIn .2s ease;
+}
+.toast-success { background: var(--success); color: #fff; }
+.toast-error { background: var(--danger); color: #fff; }
+
+@keyframes toastIn {
+  from { opacity: 0; transform: translate(-50%, 8px); }
+  to { opacity: 1; transform: translate(-50%, 0); }
+}
+
+.spinner {
+  width: 18px; height: 18px;
+  border: 2px solid rgba(124,58,237,.25);
+  border-top-color: var(--brand);
+  border-radius: 50%;
+  display: inline-block;
+  animation: spin .7s linear infinite;
+  vertical-align: -3px;
+  margin-right: 8px;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.loading-row { display: flex; align-items: center; color: var(--ink-soft); font-size: 14px; padding: 24px 0; }
+
+.empty-state {
+  text-align: center;
+  padding: 48px 20px;
+  color: var(--ink-soft);
+}
+.empty-state .empty-icon { font-size: 32px; margin-bottom: 10px; opacity: .6; }
+.empty-state p { margin: 0; font-size: 14px; }
+
+.pill {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 3px 9px; border-radius: 999px;
+  font-size: 12px; font-weight: 600;
+}
+.pill-mc { background: #eef2ff; color: #4338ca; }
+.pill-essay { background: #fef3c7; color: #92400e; }
+
+.sticky-actions {
+  position: sticky;
+  bottom: 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: 0 -4px 20px rgba(30,27,46,.08);
+  padding: 14px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  z-index: 5;
+}
+
+.bulk-question-card { transition: box-shadow .15s ease; }
+.bulk-question-card.collapsed { padding-bottom: 4px; }
+.bulk-question-header {
+  display: flex; align-items: center; justify-content: space-between;
+  cursor: pointer; user-select: none;
+}
+.bulk-question-header .chip {
+  background: var(--brand); color: #fff; font-size: 12px; font-weight: 700;
+  border-radius: 999px; width: 22px; height: 22px;
+  display: inline-flex; align-items: center; justify-content: center;
+  margin-right: 8px;
+}
+.bulk-question-header .chip.done { background: var(--success); }
+.chevron { transition: transform .15s ease; color: var(--ink-soft); }
+.chevron.open { transform: rotate(180deg); }
+
+.progress-track {
+  height: 6px; background: var(--border); border-radius: 999px; overflow: hidden; margin: 10px 0 18px;
+}
+.progress-fill {
+  height: 100%; background: var(--brand); transition: width .2s ease;
+}
+
+.filter-bar {
+  display: flex; gap: 12px; flex-wrap: wrap; align-items: flex-end;
+}
+
+.fade-in { animation: fadeInUp .18s ease; }
+@keyframes fadeInUp { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .card, .table-modern tr td, .btn, .module-card, .modal-backdrop, .modal-card,
+  .toast, .spinner, .fade-in, .chevron { animation: none !important; transition: none !important; }
+}
+
+/*PANEL*/
+/* ===== Replace the previous panel-additions.css block in theme.css with this ===== */
+
+.panel-backdrop {
+  position: fixed; inset: 0;
+  background: rgba(20, 18, 32, .5);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  z-index: 1000;
+  animation: fadeIn .18s ease;
+}
+
+.panel {
+  width: 480px;
+  max-width: 100%;
+  max-height: min(88vh, 720px);
+  background: var(--surface);
+  border-radius: 16px;
+  box-shadow: 0 24px 60px -12px rgba(30,27,46,.35), 0 0 0 1px rgba(30,27,46,.04);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: panelIn .2s cubic-bezier(.16,1,.3,1);
+}
+
+@keyframes panelIn {
+  from { opacity: 0; transform: scale(.96) translateY(10px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.panel-header {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 24px 28px 20px;
+  border-bottom: 1px solid var(--border);
+}
+/* thin brand accent along the top edge — a small signature touch */
+.panel-header::before {
+  content: "";
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--brand), var(--brand-dark));
+}
+.panel-title { margin: 0; font-size: 19px; font-weight: 650; letter-spacing: -.01em; }
+.panel-subtitle { margin: 5px 0 0; font-size: 13.5px; color: var(--ink-soft); }
+.panel-close {
+  border: none; background: var(--surface-alt); cursor: pointer;
+  font-size: 14px; color: var(--ink-soft); line-height: 1;
+  width: 30px; height: 30px; border-radius: 999px;
+  display: flex; align-items: center; justify-content: center;
+  transition: background .15s ease, color .15s ease, transform .1s ease;
+  flex-shrink: 0;
+  margin-left: 12px;
+}
+.panel-close:hover { background: var(--danger-bg); color: var(--danger); }
+.panel-close:active { transform: scale(.92); }
+
+.panel-body {
+  padding: 24px 28px;
+  overflow-y: auto;
+  flex: 1;
+}
+/* single-column form inside the panel reads cleaner than the page grid */
+.panel-body .form-grid { grid-template-columns: 1fr; gap: 18px; }
+.panel-body .field label {
+  font-size: 12.5px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em;
+  color: var(--ink-soft); margin-bottom: 7px;
+}
+.panel-body .field input,
+.panel-body .field select,
+.panel-body .field textarea {
+  border-radius: 9px;
+}
+.panel-body .field input:focus,
+.panel-body .field select:focus,
+.panel-body .field textarea:focus {
+  box-shadow: 0 0 0 4px var(--brand-bg);
+}
+
+.panel-footer {
+  padding: 18px 28px;
+  border-top: 1px solid var(--border);
+  background: var(--surface-alt);
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+@media (max-width: 560px) {
+  .panel-backdrop { padding: 0; align-items: flex-end; }
+  .panel { width: 100%; max-height: 92vh; border-radius: 16px 16px 0 0; }
+  .panel-header::before { border-radius: 16px 16px 0 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .panel-backdrop, .panel { animation: none !important; }
+}
