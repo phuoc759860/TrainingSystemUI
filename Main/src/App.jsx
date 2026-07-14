@@ -8,12 +8,14 @@ import Course from "./pages/Courses";
 import Lesson from "./pages/Lesson";
 import Material from "./pages/Material";
 import Enrollment from "./pages/Enrollment";
-import Exam from "./pages/Exams";
 import Question from "./pages/Question";
+import Exam from "./pages/Exams";
 import ExamResult from "./pages/ExamResult";
+import TakeExam from "./pages/TakeExam";
 import ProtectedRoute from "./components/ProtectedRoute";
 import "./styles/theme.css";
 import "./index.css";
+
 
 function App() {
 
@@ -96,6 +98,14 @@ function App() {
                     }
                 />
                 <Route
+                    path="/exams/:examId/take"
+                    element={
+                        <ProtectedRoute roles={["Admin", "Trainer", "Student"]}>
+                            <TakeExam />
+                        </ProtectedRoute>
+                    }
+                />
+                                <Route
                     path="/questions"
                     element={
                         <ProtectedRoute roles={["Admin", "Trainer"]}>

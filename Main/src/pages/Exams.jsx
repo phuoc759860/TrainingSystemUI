@@ -1,5 +1,5 @@
-// Main/src/pages/Exams.jsx
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
     getExams,
     createExam,
@@ -11,6 +11,10 @@ import { getCourses } from "../services/CourseService";
 import BackButton from "../components/BackButton";
 
 function Exam() {
+
+    const navigate = useNavigate();
+    const role = localStorage.getItem("role");
+    const canManage = role === "Admin" || role === "Trainer";
 
     const [exams, setExams] = useState([]);
     const [courses, setCourses] = useState([]);
@@ -49,9 +53,7 @@ function Exam() {
     };
 
     const handleSubmit = async () => {
-
         try {
-
             if (editingId == null) {
                 await createExam(form);
                 alert("Exam created.");
@@ -63,37 +65,29 @@ function Exam() {
 
             resetForm();
             loadExams();
-
         }
         catch {
             alert("Operation failed.");
         }
-
     };
 
     const handleEdit = (exam) => {
-
         setEditingId(exam.examID);
-
         setForm({
             title: exam.title,
             courseID: exam.courseID
         });
-
     };
 
     const handleDelete = async (id) => {
-
         if (!window.confirm("Delete exam?"))
             return;
 
         await deleteExam(id);
         loadExams();
-
     };
 
     return (
-
         <div className="page">
 
             <div className="page-header">
@@ -103,56 +97,57 @@ function Exam() {
                 </div>
             </div>
 
-            <div className="card" style={{ marginBottom: 24 }}>
-                <div className="form-grid">
+            {canManage && (
+                <div className="card" style={{ marginBottom: 24 }}>
+                    <div className="form-grid">
 
-                    <div className="field">
-                        <label>Exam Title</label>
-                        <input
-                            name="title"
-                            placeholder="Exam Title"
-                            value={form.title}
-                            onChange={handleChange}
-                        />
+                        <div className="field">
+                            <label>Exam Title</label>
+                            <input
+                                name="title"
+                                placeholder="Exam Title"
+                                value={form.title}
+                                onChange={handleChange}
+                            />
+                        </div>
+
+                        <div className="field">
+                            <label>Course</label>
+                            <select
+                                name="courseID"
+                                value={form.courseID}
+                                onChange={handleChange}
+                            >
+                                <option value="">Select Course</option>
+                                {
+                                    courses.map(course => (
+                                        <option key={course.courseID} value={course.courseID}>
+                                            {course.title}
+                                        </option>
+                                    ))
+                                }
+                            </select>
+                        </div>
+
                     </div>
 
-                    <div className="field">
-                        <label>Course</label>
-                        <select
-                            name="courseID"
-                            value={form.courseID}
-                            onChange={handleChange}
-                        >
-                            <option value="">Select Course</option>
-                            {
-                                courses.map(course => (
-                                    <option key={course.courseID} value={course.courseID}>
-                                        {course.title}
-                                    </option>
-                                ))
-                            }
-                        </select>
-                    </div>
-
-                </div>
-
-                <button className="btn btn-primary" onClick={handleSubmit}>
-                    {editingId == null ? "Add Exam" : "Update Exam"}
-                </button>
-
-                {editingId != null && (
-                    <button
-                        className="btn btn-outline"
-                        style={{ marginLeft: 8 }}
-                        onClick={resetForm}
-                    >
-                        Cancel
+                    <button className="btn btn-primary" onClick={handleSubmit}>
+                        {editingId == null ? "Add Exam" : "Update Exam"}
                     </button>
-                )}
-            </div>
+
+                    {editingId != null && (
+                        <button
+                            className="btn btn-outline"
+                            style={{ marginLeft: 8 }}
+                            onClick={resetForm}
+                        >
+                            Cancel
+                        </button>
+                    )}
+                </div>
+            )}
 
             <table className="table-modern">
-
                 <thead>
                     <tr>
                         <th>ID</th>
@@ -171,27 +166,36 @@ function Exam() {
                                 <td>{exam.courseTitle}</td>
                                 <td>
                                     <button
-                                        className="btn btn-outline btn-sm"
-                                        onClick={() => handleEdit(exam)}
+                                        className="btn btn-primary btn-sm"
+                                        onClick={() => navigate(`/exams/${exam.examID}/take`)}
                                     >
-                                        Edit
+                                        Take Exam
                                     </button>{" "}
-                                    <button
-                                        className="btn btn-danger btn-sm"
-                                        onClick={() => handleDelete(exam.examID)}
-                                    >
-                                        Delete
-                                    </button>
+
+                                    {canManage && (
+                                        <>
+                                            <button
+                                                className="btn btn-outline btn-sm"
+                                                onClick={() => handleEdit(exam)}
+                                            >
+                                                Edit
+                                            </button>{" "}
+                                            <button
+                                                className="btn btn-danger btn-sm"
+                                                onClick={() => handleDelete(exam.examID)}
+                                            >
+                                                Delete
+                                            </button>
+                                        </>
+                                    )}
                                 </td>
                             </tr>
                         ))
                     }
                 </tbody>
-
             </table>
 
         </div>
-
     );
 }
 

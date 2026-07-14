@@ -14,3 +14,6 @@ export const updateExam = async (id, data) =>
 
 export const deleteExam = async (id) =>
     await api.delete(`/Exam/${id}`);
+
+export const submitExam = async (examId, answers) =>
+    await api.post(`/Exam/${examId}/submit`, { answers });

@@ -1,7 +1,7 @@
 import api from "../api/axios";
 
-export const getQuestions = async () =>
-    await api.get("/QuestionBank");
+export const getQuestions = async (examId = "") =>
+    await api.get(`/QuestionBank${examId ? `?examId=${examId}` : ""}`);
 
 export const getQuestion = async (id) =>
     await api.get(`/QuestionBank/${id}`);
