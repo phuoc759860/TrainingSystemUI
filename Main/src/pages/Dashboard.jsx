@@ -1,6 +1,36 @@
 import { useNavigate } from "react-router-dom";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { getDashboard } from "../services/DashboardService";
+
+// Counts up from 0 to the target value whenever it changes — used on the
+// stat cards so the dashboard feels alive on load instead of just appearing.
+function AnimatedNumber({ value }) {
+    const [display, setDisplay] = useState(0);
+    const frameRef = useRef(null);
+
+    useEffect(() => {
+        if (value == null) return;
+
+        const target = Number(value) || 0;
+        const duration = 700;
+        const startTime = performance.now();
+
+        const tick = (now) => {
+            const progress = Math.min((now - startTime) / duration, 1);
+            const eased = 1 - Math.pow(1 - progress, 3); // ease-out cubic
+            setDisplay(Math.round(target * eased));
+            if (progress < 1) {
+                frameRef.current = requestAnimationFrame(tick);
+            }
+        };
+
+        frameRef.current = requestAnimationFrame(tick);
+        return () => cancelAnimationFrame(frameRef.current);
+    }, [value]);
+
+    if (value == null) return <>–</>;
+    return <>{display}</>;
+}
 
 function Dashboard() {
     const navigate = useNavigate();
@@ -40,31 +70,65 @@ function Dashboard() {
 
     return (
         <div className="page">
-            <div className="page-header">
-                <div>
-                    <h2>Welcome back, {name}</h2>
-                    <p style={{ color: "var(--ink-soft)", margin: "4px 0 0" }}>
-                        {email} · <span className="badge badge-success">{role}</span>
-                    </p>
+
+            {/* ---- Hero banner ---- */}
+            <div
+                className="card"
+                style={{
+                    marginBottom: 32,
+                    padding: 0,
+                    overflow: "hidden",
+                    border: "none",
+                    boxShadow: "var(--shadow)"
+                }}
+            >
+                <div style={{
+                    background: "var(--gradient-brand)",
+                    padding: "30px 32px",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    flexWrap: "wrap",
+                    gap: 16,
+                    color: "#fff"
+                }}>
+                    <div>
+                        <p style={{ margin: 0, fontSize: 13, opacity: .85, fontWeight: 600, letterSpacing: ".02em", textTransform: "uppercase" }}>
+                            {role}
+                        </p>
+                        <h2 style={{ margin: "6px 0 0", color: "#fff", fontSize: 28 }}>
+                            Welcome back, {name}
+                        </h2>
+                        <p style={{ margin: "6px 0 0", opacity: .85, fontSize: 14 }}>
+                            {email}
+                        </p>
+                    </div>
+                    <button
+                        className="btn"
+                        style={{ background: "rgba(255,255,255,.16)", color: "#fff", flexShrink: 0 }}
+                        onClick={logout}
+                    >
+                        Logout
+                    </button>
                 </div>
-                <button className="btn btn-danger" onClick={logout}>Logout</button>
             </div>
 
             <div className="stat-grid">
-                <div className="stat-card"><div className="num">{stats.totalUsers ?? "–"}</div><div className="label">Users</div></div>
-                <div className="stat-card"><div className="num">{stats.totalCourses ?? "–"}</div><div className="label">Courses</div></div>
-                <div className="stat-card"><div className="num">{stats.totalLessons ?? "–"}</div><div className="label">Lessons</div></div>
-                <div className="stat-card"><div className="num">{stats.totalMaterials ?? "–"}</div><div className="label">Materials</div></div>
-                <div className="stat-card"><div className="num">{stats.totalExams ?? "–"}</div><div className="label">Exams</div></div>
-                <div className="stat-card"><div className="num">{stats.totalEnrollments ?? "–"}</div><div className="label">Enrollments</div></div>
-                <div className="stat-card"><div className="num">{stats.totalResults ?? "–"}</div><div className="label">Results</div></div>
+                <div className="stat-card"><div className="num"><AnimatedNumber value={stats.totalUsers} /></div><div className="label">Users</div></div>
+                <div className="stat-card"><div className="num"><AnimatedNumber value={stats.totalCourses} /></div><div className="label">Courses</div></div>
+                <div className="stat-card"><div className="num"><AnimatedNumber value={stats.totalLessons} /></div><div className="label">Lessons</div></div>
+                <div className="stat-card"><div className="num"><AnimatedNumber value={stats.totalMaterials} /></div><div className="label">Materials</div></div>
+                <div className="stat-card"><div className="num"><AnimatedNumber value={stats.totalExams} /></div><div className="label">Exams</div></div>
+                <div className="stat-card"><div className="num"><AnimatedNumber value={stats.totalEnrollments} /></div><div className="label">Enrollments</div></div>
+                <div className="stat-card"><div className="num"><AnimatedNumber value={stats.totalResults} /></div><div className="label">Results</div></div>
             </div>
 
-            <h3 style={{ marginBottom: 14 }}>Sections</h3>
+            <h3 style={{ marginBottom: 14, fontSize: 19 }}>Sections</h3>
             <div className="module-grid">
                 {modules.filter(m => m.roles.includes(role)).map(m => (
                     <button key={m.path} className="module-card" onClick={() => navigate(m.path)}>
                         {m.label}
+                        <span className="arrow">→</span>
                     </button>
                 ))}
             </div>

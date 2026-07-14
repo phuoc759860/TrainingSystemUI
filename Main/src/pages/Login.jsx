@@ -54,11 +54,27 @@ function Login() {
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            background: "var(--surface-alt)"
+            background: "linear-gradient(160deg, var(--surface-alt) 0%, var(--brand-bg) 100%)"
         }}>
-            <div className="card" style={{ width: 360 }}>
+            <div className="card" style={{ width: 380, boxShadow: "var(--shadow-lg)" }}>
 
-                <h2 style={{ marginTop: 0 }}>Login</h2>
+                <div style={{ textAlign: "center", marginBottom: 22 }}>
+                    <div style={{
+                        width: 44, height: 44,
+                        margin: "0 auto 14px",
+                        borderRadius: 10,
+                        background: "linear-gradient(135deg, var(--brand), var(--brand-dark))",
+                        display: "flex", alignItems: "center", justifyContent: "center",
+                        color: "var(--accent)", fontFamily: "var(--font-display)",
+                        fontSize: 20, fontWeight: 700, boxShadow: "var(--shadow)"
+                    }}>
+                        T
+                    </div>
+                    <h2 style={{ margin: 0 }}>Welcome back</h2>
+                    <p style={{ color: "var(--ink-soft)", fontSize: 14, margin: "6px 0 0" }}>
+                        Sign in to your training account
+                    </p>
+                </div>
 
                 <form onSubmit={handleLogin}>
 
@@ -66,31 +82,36 @@ function Login() {
                         <label>Email</label>
                         <input
                             type="email"
-                            placeholder="Email"
+                            placeholder="you@example.com"
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
                         />
                     </div>
 
-                    <div className="field" style={{ marginBottom: 18 }}>
+                    <div className="field" style={{ marginBottom: 20 }}>
                         <label>Password</label>
                         <input
                             type="password"
-                            placeholder="Password"
+                            placeholder="••••••••"
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
                         />
                     </div>
 
                     <button type="submit" className="btn btn-primary" style={{ width: "100%" }}>
-                        Login
+                        Sign in
                     </button>
 
                 </form>
 
-                <p style={{ marginTop: 18, marginBottom: 8, color: "var(--ink-soft)", fontSize: 14 }}>
-                    Don't have an account?
-                </p>
+                <div style={{
+                    display: "flex", alignItems: "center", gap: 12,
+                    margin: "22px 0 16px", color: "var(--ink-soft)", fontSize: 12.5
+                }}>
+                    <div style={{ flex: 1, height: 1, background: "var(--border)" }} />
+                    New here?
+                    <div style={{ flex: 1, height: 1, background: "var(--border)" }} />
+                </div>
 
                 <button
                     type="button"
@@ -98,7 +119,7 @@ function Login() {
                     style={{ width: "100%" }}
                     onClick={() => navigate("/register")}
                 >
-                    Register
+                    Create an account
                 </button>
 
             </div>

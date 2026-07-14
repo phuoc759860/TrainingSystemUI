@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
     getAvailableCourses,
     getClassOverview,
@@ -10,13 +10,14 @@ import SidePanel from "../components/SidePanel";
 import Toast from "../components/Toast";
 import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
-    ResponsiveContainer, Cell, LabelList
+    ResponsiveContainer, Cell, LabelList, PieChart, Pie
 } from "recharts";
 
-const SUCCESS = "#16a34a";
-const BRAND = "#7c3aed";
-const DANGER = "#dc2626";
-const INK_SOFT = "#6b6478";
+const SUCCESS = "#17a668";
+const BRAND = "#6c5ce7";
+const BRAND_LIGHT = "#8b7ffb";
+const DANGER = "#e34a4a";
+const INK_SOFT = "#6b7089";
 
 function scoreColor(value) {
     if (value >= 70) return SUCCESS;
@@ -29,10 +30,54 @@ function truncate(str, max = 22) {
     return str.length > max ? `${str.slice(0, max)}…` : str;
 }
 
+function initials(name) {
+    if (!name) return "?";
+    const parts = name.trim().split(/\s+/);
+    return (parts[0][0] + (parts[1]?.[0] || "")).toUpperCase();
+}
+
+// Generic client-side sort — used by every sortable table on this page.
+function sortRows(rows, key, dir) {
+    if (!key) return rows;
+    const sorted = [...rows].sort((a, b) => {
+        const av = a[key], bv = b[key];
+        if (typeof av === "string") return av.localeCompare(bv);
+        return (av ?? 0) - (bv ?? 0);
+    });
+    return dir === "desc" ? sorted.reverse() : sorted;
+}
+
+function SortableTh({ label, sortKey, currentSort, onSort }) {
+    const active = currentSort.key === sortKey;
+    return (
+        <th
+            className={`sortable ${active ? "sorted" : ""}`}
+            onClick={() => onSort(sortKey)}
+        >
+            {label}
+            <span className="sort-arrow">
+                {active ? (currentSort.dir === "asc" ? "▲" : "▼") : "↕"}
+            </span>
+        </th>
+    );
+}
+
+function MiniBar({ value, max = 100 }) {
+    const pct = Math.max(0, Math.min(100, (value / max) * 100));
+    return (
+        <span className="mini-bar">
+            <span
+                className="mini-bar-fill"
+                style={{ width: `${pct}%`, background: scoreColor(value) }}
+            />
+        </span>
+    );
+}
+
 function ChartCard({ title, subtitle, children, height = 300 }) {
     return (
         <div className="card fade-in" style={{ marginBottom: 24 }}>
-            <h3 style={{ marginTop: 0, marginBottom: subtitle ? 4 : 16 }}>{title}</h3>
+            <h3 style={{ marginTop: 0, marginBottom: subtitle ? 4 : 16, fontSize: 17 }}>{title}</h3>
             {subtitle && (
                 <p style={{ color: "var(--ink-soft)", fontSize: 13, marginTop: 0, marginBottom: 16 }}>
                     {subtitle}
@@ -51,15 +96,15 @@ function CustomTooltip({ active, payload, label, unit = "%" }) {
         <div style={{
             background: "var(--surface)",
             border: "1px solid var(--border)",
-            borderRadius: 8,
-            padding: "8px 12px",
+            borderRadius: 10,
+            padding: "9px 13px",
             boxShadow: "var(--shadow)",
             fontSize: 13,
             maxWidth: 260
         }}>
-            <div style={{ fontWeight: 600, marginBottom: 4 }}>{label}</div>
+            <div style={{ fontWeight: 700, marginBottom: 4 }}>{label}</div>
             {payload.map((p, i) => (
-                <div key={i} style={{ color: p.color || "var(--ink)" }}>
+                <div key={i} style={{ color: p.color || p.payload?.fill || "var(--ink)" }}>
                     {p.name}: {p.value}{unit}
                 </div>
             ))}
@@ -88,6 +133,27 @@ function CourseSelect({ courses, value, onChange, placeholder = "Select a course
             </select>
         </div>
     );
+}
+
+function KpiRow({ items }) {
+    return (
+        <div className="stat-grid">
+            {items.map((item, i) => (
+                <div className="stat-card" key={i}>
+                    <div className="num" style={item.color ? { color: item.color } : undefined}>
+                        {item.value}
+                    </div>
+                    <div className="label">{item.label}</div>
+                </div>
+            ))}
+        </div>
+    );
+}
+
+function StatusBadge({ examsTaken, needsAttention }) {
+    if (examsTaken === 0) return <span className="badge">No attempts</span>;
+    if (needsAttention) return <span className="badge badge-danger">Needs Attention</span>;
+    return <span className="badge badge-success">On Track</span>;
 }
 
 const TABS = [
@@ -133,11 +199,15 @@ function Statistics() {
     const [classCourseId, setClassCourseId] = useState("");
     const [classStudents, setClassStudents] = useState([]);
     const [classLoading, setClassLoading] = useState(false);
+    const [classSort, setClassSort] = useState({ key: "averageScore", dir: "asc" });
+    const [classAttentionOnly, setClassAttentionOnly] = useState(false);
 
     // ---------- STUDENTS tab ----------
     const [studentSearch, setStudentSearch] = useState("");
     const [allStudents, setAllStudents] = useState([]);
     const [studentsLoading, setStudentsLoading] = useState(true);
+    const [studentSort, setStudentSort] = useState({ key: "averageScore", dir: "asc" });
+    const [studentAttentionOnly, setStudentAttentionOnly] = useState(false);
 
     // ---------- EXAMS tab ----------
     const [examCourseId, setExamCourseId] = useState("");
@@ -213,23 +283,87 @@ function Statistics() {
         }
     };
 
-    // ---------- chart data ----------
+    const toggleSort = (setSort) => (key) => {
+        setSort(prev => prev.key === key
+            ? { key, dir: prev.dir === "asc" ? "desc" : "asc" }
+            : { key, dir: "asc" });
+    };
+
+    // ---------- CLASS derived ----------
+    const classFiltered = useMemo(() => {
+        let rows = classAttentionOnly ? classStudents.filter(s => s.needsAttention) : classStudents;
+        return sortRows(rows, classSort.key, classSort.dir);
+    }, [classStudents, classSort, classAttentionOnly]);
 
     const classChartData = [...classStudents]
         .filter(s => s.examsTaken > 0)
         .sort((a, b) => a.averageScore - b.averageScore)
         .map(s => ({ name: truncate(s.name, 14), fullName: s.name, score: s.averageScore }));
 
-    const filteredStudents = studentSearch.trim()
-        ? allStudents.filter(s => s.name.toLowerCase().includes(studentSearch.trim().toLowerCase()))
-        : allStudents;
+    const classKpis = useMemo(() => {
+        const active = classStudents.filter(s => s.examsTaken > 0);
+        const avg = active.length
+            ? Math.round((active.reduce((sum, s) => sum + s.averageScore, 0) / active.length) * 10) / 10
+            : null;
+        const attention = classStudents.filter(s => s.needsAttention).length;
+        return [
+            { label: "Enrolled Students", value: classStudents.length },
+            { label: "Class Average", value: avg != null ? `${avg}%` : "—", color: avg != null ? scoreColor(avg) : undefined },
+            { label: "Needs Attention", value: attention, color: attention > 0 ? DANGER : SUCCESS }
+        ];
+    }, [classStudents]);
 
+    const passFailData = useMemo(() => {
+        const active = classStudents.filter(s => s.examsTaken > 0);
+        const passing = active.filter(s => !s.needsAttention).length;
+        const attention = active.length - passing;
+        if (active.length === 0) return [];
+        return [
+            { name: "On Track", value: passing, fill: SUCCESS },
+            { name: "Needs Attention", value: attention, fill: DANGER }
+        ];
+    }, [classStudents]);
+
+    // ---------- STUDENTS derived ----------
+    const filteredStudents = useMemo(() => {
+        let rows = studentSearch.trim()
+            ? allStudents.filter(s => s.name.toLowerCase().includes(studentSearch.trim().toLowerCase()))
+            : allStudents;
+        if (studentAttentionOnly) rows = rows.filter(s => s.needsAttention);
+        return sortRows(rows, studentSort.key, studentSort.dir);
+    }, [allStudents, studentSearch, studentSort, studentAttentionOnly]);
+
+    const studentKpis = useMemo(() => {
+        const active = allStudents.filter(s => s.examsTaken > 0);
+        const avg = active.length
+            ? Math.round((active.reduce((sum, s) => sum + s.averageScore, 0) / active.length) * 10) / 10
+            : null;
+        const attention = allStudents.filter(s => s.needsAttention).length;
+        return [
+            { label: "Total Students", value: allStudents.length },
+            { label: "Overall Average", value: avg != null ? `${avg}%` : "—", color: avg != null ? scoreColor(avg) : undefined },
+            { label: "Needs Attention", value: attention, color: attention > 0 ? DANGER : SUCCESS }
+        ];
+    }, [allStudents]);
+
+    // ---------- EXAMS derived ----------
     const examChartData = examRanking.map((e, i) => ({
         name: truncate(e.examTitle, 26),
         fullName: e.examTitle,
         rank: i + 1,
         score: e.averageScore
     }));
+
+    const examKpis = useMemo(() => {
+        if (examRanking.length === 0) return [];
+        const top = examRanking[0];
+        const bottom = examRanking[examRanking.length - 1];
+        return [
+            { label: "Exams Ranked", value: examRanking.length },
+            { label: "Top Score", value: `${top.averageScore}%`, color: SUCCESS },
+            { label: "Lowest Score", value: `${bottom.averageScore}%`, color: bottom.averageScore < 50 ? DANGER : undefined }
+        ];
+    }, [examRanking]);
 
     const courseBreakdownData = detail?.courseBreakdown.map(c => ({
         name: truncate(c.courseTitle, 16),
@@ -259,12 +393,12 @@ function Statistics() {
                 </div>
             </div>
 
-            {/* ---- Tab bar ---- */}
-            <div style={{ display: "flex", gap: 8, marginBottom: 24, borderBottom: "1px solid var(--border)", paddingBottom: 12 }}>
+            {/* ---- Segmented tab bar ---- */}
+            <div className="tabs-segment">
                 {TABS.map(t => (
                     <button
                         key={t.key}
-                        className={`btn ${activeTab === t.key ? "btn-primary" : "btn-outline"}`}
+                        className={activeTab === t.key ? "active" : ""}
                         onClick={() => setActiveTab(t.key)}
                     >
                         {t.label}
@@ -292,64 +426,103 @@ function Statistics() {
                         <EmptyPrompt icon="📈" text="No enrolled students in this course yet." />
                     ) : (
                         <>
-                            {classChartData.length > 0 && (
-                                <ChartCard
-                                    title="Class Score Distribution"
-                                    subtitle="Average score per student, lowest to highest"
-                                    height={Math.max(220, classChartData.length * 34)}
-                                >
-                                    <ResponsiveContainer width="100%" height="100%">
-                                        <BarChart data={classChartData} layout="vertical" margin={{ top: 4, right: 30, left: 8, bottom: 4 }}>
-                                            <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" horizontal={false} />
-                                            <XAxis type="number" domain={[0, 100]} tick={{ fontSize: 12, fill: INK_SOFT }} />
-                                            <YAxis type="category" dataKey="name" width={110} tick={{ fontSize: 12, fill: INK_SOFT }} />
-                                            <Tooltip content={<CustomTooltip />} labelFormatter={(_, p) => p?.[0]?.payload?.fullName} />
-                                            <Bar dataKey="score" name="Average Score" radius={[0, 4, 4, 0]}>
-                                                {classChartData.map((entry, i) => (
-                                                    <Cell key={i} fill={scoreColor(entry.score)} />
-                                                ))}
-                                                <LabelList dataKey="score" position="right" formatter={(v) => `${v}%`} style={{ fontSize: 12, fill: "var(--ink)" }} />
-                                            </Bar>
-                                        </BarChart>
-                                    </ResponsiveContainer>
-                                </ChartCard>
+                            <KpiRow items={classKpis} />
+
+                            {(classChartData.length > 0 || passFailData.length > 0) && (
+                                <div style={{ display: "grid", gridTemplateColumns: passFailData.length ? "2fr 1fr" : "1fr", gap: 24 }}>
+                                    {classChartData.length > 0 && (
+                                        <ChartCard
+                                            title="Class Score Distribution"
+                                            subtitle="Average score per student, lowest to highest"
+                                            height={Math.max(220, classChartData.length * 34)}
+                                        >
+                                            <ResponsiveContainer width="100%" height="100%">
+                                                <BarChart data={classChartData} layout="vertical" margin={{ top: 4, right: 30, left: 8, bottom: 4 }}>
+                                                    <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" horizontal={false} />
+                                                    <XAxis type="number" domain={[0, 100]} tick={{ fontSize: 12, fill: INK_SOFT }} />
+                                                    <YAxis type="category" dataKey="name" width={110} tick={{ fontSize: 12, fill: INK_SOFT }} />
+                                                    <Tooltip content={<CustomTooltip />} labelFormatter={(_, p) => p?.[0]?.payload?.fullName} />
+                                                    <Bar dataKey="score" name="Average Score" radius={[0, 6, 6, 0]}>
+                                                        {classChartData.map((entry, i) => (
+                                                            <Cell key={i} fill={scoreColor(entry.score)} />
+                                                        ))}
+                                                        <LabelList dataKey="score" position="right" formatter={(v) => `${v}%`} style={{ fontSize: 12, fill: "var(--ink)" }} />
+                                                    </Bar>
+                                                </BarChart>
+                                            </ResponsiveContainer>
+                                        </ChartCard>
+                                    )}
+
+                                    {passFailData.length > 0 && (
+                                        <ChartCard title="On Track vs Needs Attention" height={Math.max(220, classChartData.length * 34)}>
+                                            <ResponsiveContainer width="100%" height="100%">
+                                                <PieChart>
+                                                    <Tooltip content={<CustomTooltip unit=" students" />} />
+                                                    <Pie
+                                                        data={passFailData}
+                                                        dataKey="value"
+                                                        nameKey="name"
+                                                        innerRadius="60%"
+                                                        outerRadius="85%"
+                                                        paddingAngle={3}
+                                                    >
+                                                        {passFailData.map((entry, i) => (
+                                                            <Cell key={i} fill={entry.fill} />
+                                                        ))}
+                                                    </Pie>
+                                                </PieChart>
+                                            </ResponsiveContainer>
+                                            <div style={{ display: "flex", justifyContent: "center", gap: 16, marginTop: -8, fontSize: 12.5, color: "var(--ink-soft)" }}>
+                                                <span><span style={{ color: SUCCESS }}>●</span> On Track</span>
+                                                <span><span style={{ color: DANGER }}>●</span> Needs Attention</span>
+                                            </div>
+                                        </ChartCard>
+                                    )}
+                                </div>
                             )}
+
+                            <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 12 }}>
+                                <button
+                                    className={`chip-toggle ${classAttentionOnly ? "active" : ""}`}
+                                    onClick={() => setClassAttentionOnly(v => !v)}
+                                >
+                                    ⚠ Needs Attention only
+                                </button>
+                            </div>
 
                             <table className="table-modern fade-in">
                                 <thead>
                                     <tr>
-                                        <th>Student</th>
-                                        <th>Exams Taken</th>
-                                        <th>Average Score</th>
-                                        <th>Pass Rate</th>
+                                        <SortableTh label="Student" sortKey="name" currentSort={classSort} onSort={toggleSort(setClassSort)} />
+                                        <SortableTh label="Exams Taken" sortKey="examsTaken" currentSort={classSort} onSort={toggleSort(setClassSort)} />
+                                        <SortableTh label="Average Score" sortKey="averageScore" currentSort={classSort} onSort={toggleSort(setClassSort)} />
+                                        <SortableTh label="Pass Rate" sortKey="passRate" currentSort={classSort} onSort={toggleSort(setClassSort)} />
                                         <th>Status</th>
-                                        <th></th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {classStudents.map(s => (
-                                        <tr key={s.userID}>
-                                            <td style={{ fontWeight: 500 }}>{s.name}</td>
+                                    {classFiltered.map(s => (
+                                        <tr
+                                            key={s.userID}
+                                            className={s.examsTaken > 0 ? "clickable-row" : ""}
+                                            onClick={() => s.examsTaken > 0 && openStudent(s.userID)}
+                                        >
+                                            <td className="name-cell">
+                                                <span className="avatar-chip">{initials(s.name)}</span>
+                                                <span style={{ fontWeight: 600 }}>{s.name}</span>
+                                            </td>
                                             <td>{s.examsTaken}</td>
-                                            <td>{s.examsTaken > 0 ? `${s.averageScore}%` : "—"}</td>
+                                            <td>
+                                                {s.examsTaken > 0 ? (
+                                                    <>
+                                                        <MiniBar value={s.averageScore} />
+                                                        {s.averageScore}%
+                                                    </>
+                                                ) : "—"}
+                                            </td>
                                             <td>{s.examsTaken > 0 ? `${s.passRate}%` : "—"}</td>
                                             <td>
-                                                {s.examsTaken === 0 ? (
-                                                    <span className="badge">No attempts</span>
-                                                ) : s.needsAttention ? (
-                                                    <span className="badge badge-danger">Needs Attention</span>
-                                                ) : (
-                                                    <span className="badge badge-success">On Track</span>
-                                                )}
-                                            </td>
-                                            <td style={{ textAlign: "right" }}>
-                                                <button
-                                                    className="btn btn-outline btn-sm"
-                                                    onClick={() => openStudent(s.userID)}
-                                                    disabled={s.examsTaken === 0}
-                                                >
-                                                    View Details
-                                                </button>
+                                                <StatusBadge examsTaken={s.examsTaken} needsAttention={s.needsAttention} />
                                             </td>
                                         </tr>
                                     ))}
@@ -363,13 +536,23 @@ function Statistics() {
             {/* ================= STUDENTS TAB ================= */}
             {activeTab === "students" && (
                 <>
-                    <div className="field" style={{ maxWidth: 320, marginBottom: 24 }}>
-                        <label>Search Student</label>
-                        <input
-                            placeholder="Search by name, or leave blank for all..."
-                            value={studentSearch}
-                            onChange={(e) => setStudentSearch(e.target.value)}
-                        />
+                    <KpiRow items={studentKpis} />
+
+                    <div style={{ display: "flex", gap: 12, alignItems: "flex-end", marginBottom: 20, flexWrap: "wrap" }}>
+                        <div className="field" style={{ maxWidth: 320, marginBottom: 0 }}>
+                            <label>Search Student</label>
+                            <input
+                                placeholder="Search by name, or leave blank for all..."
+                                value={studentSearch}
+                                onChange={(e) => setStudentSearch(e.target.value)}
+                            />
+                        </div>
+                        <button
+                            className={`chip-toggle ${studentAttentionOnly ? "active" : ""}`}
+                            onClick={() => setStudentAttentionOnly(v => !v)}
+                        >
+                            ⚠ Needs Attention only
+                        </button>
                     </div>
 
                     {studentsLoading ? (
@@ -385,38 +568,36 @@ function Statistics() {
                         <table className="table-modern fade-in">
                             <thead>
                                 <tr>
-                                    <th>Student</th>
-                                    <th>Exams Taken (all courses)</th>
-                                    <th>Average Score</th>
-                                    <th>Pass Rate</th>
+                                    <SortableTh label="Student" sortKey="name" currentSort={studentSort} onSort={toggleSort(setStudentSort)} />
+                                    <SortableTh label="Exams Taken" sortKey="examsTaken" currentSort={studentSort} onSort={toggleSort(setStudentSort)} />
+                                    <SortableTh label="Average Score" sortKey="averageScore" currentSort={studentSort} onSort={toggleSort(setStudentSort)} />
+                                    <SortableTh label="Pass Rate" sortKey="passRate" currentSort={studentSort} onSort={toggleSort(setStudentSort)} />
                                     <th>Status</th>
-                                    <th></th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {filteredStudents.map(s => (
-                                    <tr key={s.userID}>
-                                        <td style={{ fontWeight: 500 }}>{s.name}</td>
+                                    <tr
+                                        key={s.userID}
+                                        className={s.examsTaken > 0 ? "clickable-row" : ""}
+                                        onClick={() => s.examsTaken > 0 && openStudent(s.userID)}
+                                    >
+                                        <td className="name-cell">
+                                            <span className="avatar-chip">{initials(s.name)}</span>
+                                            <span style={{ fontWeight: 600 }}>{s.name}</span>
+                                        </td>
                                         <td>{s.examsTaken}</td>
-                                        <td>{s.examsTaken > 0 ? `${s.averageScore}%` : "—"}</td>
+                                        <td>
+                                            {s.examsTaken > 0 ? (
+                                                <>
+                                                    <MiniBar value={s.averageScore} />
+                                                    {s.averageScore}%
+                                                </>
+                                            ) : "—"}
+                                        </td>
                                         <td>{s.examsTaken > 0 ? `${s.passRate}%` : "—"}</td>
                                         <td>
-                                            {s.examsTaken === 0 ? (
-                                                <span className="badge">No attempts</span>
-                                            ) : s.needsAttention ? (
-                                                <span className="badge badge-danger">Needs Attention</span>
-                                            ) : (
-                                                <span className="badge badge-success">On Track</span>
-                                            )}
-                                        </td>
-                                        <td style={{ textAlign: "right" }}>
-                                            <button
-                                                className="btn btn-outline btn-sm"
-                                                onClick={() => openStudent(s.userID)}
-                                                disabled={s.examsTaken === 0}
-                                            >
-                                                View Performance
-                                            </button>
+                                            <StatusBadge examsTaken={s.examsTaken} needsAttention={s.needsAttention} />
                                         </td>
                                     </tr>
                                 ))}
@@ -446,6 +627,8 @@ function Statistics() {
                         <EmptyPrompt icon="🗒️" text="No graded attempts for this course's exams yet." />
                     ) : (
                         <>
+                            <KpiRow items={examKpis} />
+
                             <ChartCard
                                 title="Exam Ranking"
                                 subtitle="Average score per exam, highest to lowest"
@@ -457,7 +640,7 @@ function Statistics() {
                                         <XAxis type="number" domain={[0, 100]} tick={{ fontSize: 12, fill: INK_SOFT }} />
                                         <YAxis type="category" dataKey="name" width={170} tick={{ fontSize: 11, fill: INK_SOFT }} />
                                         <Tooltip content={<CustomTooltip />} labelFormatter={(_, p) => p?.[0]?.payload?.fullName} />
-                                        <Bar dataKey="score" name="Average Score" radius={[0, 4, 4, 0]}>
+                                        <Bar dataKey="score" name="Average Score" radius={[0, 6, 6, 0]}>
                                             {examChartData.map((entry, i) => (
                                                 <Cell key={i} fill={scoreColor(entry.score)} />
                                             ))}
@@ -480,10 +663,11 @@ function Statistics() {
                                 <tbody>
                                     {examRanking.map((e, i) => (
                                         <tr key={e.examID}>
-                                            <td style={{ fontWeight: 600 }}>{rankMedal(i + 1)}</td>
-                                            <td style={{ fontWeight: 500 }}>{e.examTitle}</td>
+                                            <td style={{ fontWeight: 700 }}>{rankMedal(i + 1)}</td>
+                                            <td style={{ fontWeight: 600 }}>{e.examTitle}</td>
                                             <td>{e.attemptCount}</td>
                                             <td>
+                                                <MiniBar value={e.averageScore} />
                                                 <span className={`badge ${e.averageScore < 50 ? "badge-danger" : "badge-success"}`}>
                                                     {e.averageScore}%
                                                 </span>
@@ -544,7 +728,7 @@ function Statistics() {
                                             <XAxis type="number" domain={[0, 100]} tick={{ fontSize: 11, fill: INK_SOFT }} />
                                             <YAxis type="category" dataKey="name" width={100} tick={{ fontSize: 11, fill: INK_SOFT }} />
                                             <Tooltip content={<CustomTooltip />} labelFormatter={(_, p) => p?.[0]?.payload?.fullName} />
-                                            <Bar dataKey="score" name="Average Score" radius={[0, 4, 4, 0]}>
+                                            <Bar dataKey="score" name="Average Score" radius={[0, 6, 6, 0]}>
                                                 {courseBreakdownData.map((entry, i) => (
                                                     <Cell key={i} fill={scoreColor(entry.score)} />
                                                 ))}
@@ -566,7 +750,7 @@ function Statistics() {
                                             <XAxis type="number" domain={[0, 100]} tick={{ fontSize: 11, fill: INK_SOFT }} />
                                             <YAxis type="category" dataKey="name" width={100} tick={{ fontSize: 11, fill: INK_SOFT }} />
                                             <Tooltip content={<CustomTooltip />} />
-                                            <Bar dataKey="score" name="Score" radius={[0, 4, 4, 0]}>
+                                            <Bar dataKey="score" name="Score" radius={[0, 6, 6, 0]}>
                                                 {skillTypeData.map((entry, i) => (
                                                     <Cell key={i} fill={scoreColor(entry.score)} />
                                                 ))}
