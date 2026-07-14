@@ -15,6 +15,7 @@ import TakeExam from "./pages/TakeExam";
 import ProtectedRoute from "./components/ProtectedRoute";
 import "./styles/theme.css";
 import "./index.css";
+import GradeAttempt from "./pages/GradeAttempt";
 
 
 function App() {
@@ -105,7 +106,7 @@ function App() {
                         </ProtectedRoute>
                     }
                 />
-                                <Route
+                <Route
                     path="/questions"
                     element={
                         <ProtectedRoute roles={["Admin", "Trainer"]}>
@@ -118,6 +119,14 @@ function App() {
                     element={
                         <ProtectedRoute roles={["Admin", "Trainer"]}>
                             <ExamResult />
+                        </ProtectedRoute>
+                    }
+                />
+                <Route
+                    path="/exam-results/:id/grade"
+                    element={
+                        <ProtectedRoute roles={["Admin", "Trainer"]}>
+                            <GradeAttempt />
                         </ProtectedRoute>
                     }
                 />

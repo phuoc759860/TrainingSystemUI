@@ -6,6 +6,12 @@ export const getExamResults = async () =>
 export const getExamResult = async (id) =>
     await api.get(`/ExamResult/${id}`);
 
+export const getExamAttempt = async (id) =>
+    await api.get(`/ExamResult/${id}/attempt`);
+
+export const gradeExamAttempt = async (id, data) =>
+    await api.put(`/ExamResult/${id}/grade`, data);
+
 export const createExamResult = async (data) =>
     await api.post("/ExamResult", data);
 

@@ -72,14 +72,22 @@ function ExamResult() {
             </div>
 
             <table className="table-modern">
-                <thead><tr><th>ID</th><th>User</th><th>Exam</th><th>Score</th><th>Status</th><th>Submitted</th><th></th></tr></thead>
+                <thead><tr><th>ID</th><th>User</th><th>Exam</th><th>Score</th><th>Status</th><th>Grading</th><th>Submitted</th><th></th></tr></thead>
                 <tbody>
                     {results.map(r => (
                         <tr key={r.resultID}>
                             <td>{r.resultID}</td><td>{r.userName}</td><td>{r.examTitle}</td><td>{r.score}</td>
                             <td><span className={`badge ${r.passed ? "badge-success" : "badge-danger"}`}>{r.passed ? "Passed" : "Failed"}</span></td>
+                            <td>
+                                {r.needsGrading
+                                    ? <span className="badge badge-danger">Needs Grading</span>
+                                    : <span className="badge badge-success">Graded</span>}
+                            </td>
                             <td>{new Date(r.submittedAt).toLocaleString()}</td>
                             <td>
+                                <button className="btn btn-outline btn-sm" onClick={() => navigate(`/exam-results/${r.resultID}/grade`)}>
+                                    {r.needsGrading ? "Grade" : "View"}
+                                </button>{" "}
                                 <button className="btn btn-outline btn-sm" onClick={() => handleEdit(r)}>Edit</button>{" "}
                                 <button className="btn btn-danger btn-sm" onClick={() => handleDelete(r.resultID)}>Delete</button>
                             </td>

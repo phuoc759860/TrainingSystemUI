@@ -14,8 +14,8 @@ function Course() {
     const [editingId, setEditingId] = useState(null);
     const [trainers, setTrainers] = useState([]);
     const [search, setSearch] = useState("");
-
     const role = localStorage.getItem("role");
+    const canManage = role === "Admin" || role === "Trainer";
 
     const [form, setForm] = useState({
         title: "",
@@ -180,9 +180,19 @@ function Course() {
 
                 </div>
 
-                <button className="btn btn-primary" onClick={handleSubmit}>
-                    {editingId == null ? "Add Course" : "Update Course"}
-                </button>
+                {canManage && (
+                    <div className="card" style={{ marginBottom: 24 }}>
+                        {/* ...existing form-grid... */}
+                        <button className="btn btn-primary" onClick={handleSubmit}>
+                            {editingId == null ? "Add Course" : "Update Course"}
+                        </button>
+                        {editingId != null && (
+                            <button className="btn btn-outline" style={{ marginLeft: 8 }} onClick={resetForm}>
+                                Cancel
+                            </button>
+                        )}
+                    </div>
+                )}
 
                 {editingId != null && (
                     <button
@@ -216,18 +226,16 @@ function Course() {
                                 <td>{course.description}</td>
                                 <td>{course.trainerName}</td>
                                 <td>
-                                    <button
-                                        className="btn btn-outline btn-sm"
-                                        onClick={() => handleEdit(course)}
-                                    >
-                                        Edit
-                                    </button>{" "}
-                                    <button
-                                        className="btn btn-danger btn-sm"
-                                        onClick={() => handleDelete(course.courseID)}
-                                    >
-                                        Delete
-                                    </button>
+                                    {canManage && (
+                                        <>
+                                            <button className="btn btn-outline btn-sm" onClick={() => handleEdit(course)}>
+                                                Edit
+                                            </button>{" "}
+                                            <button className="btn btn-danger btn-sm" onClick={() => handleDelete(course.courseID)}>
+                                                Delete
+                                            </button>
+                                        </>
+                                    )}
                                 </td>
                             </tr>
                         ))
