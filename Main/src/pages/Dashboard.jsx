@@ -36,7 +36,6 @@ function Dashboard() {
     const navigate = useNavigate();
     const role = localStorage.getItem("role");
     const name = localStorage.getItem("name");
-    const email = localStorage.getItem("email");
     const [stats, setStats] = useState({});
 
     useEffect(() => {
@@ -50,11 +49,6 @@ function Dashboard() {
         })();
     }, []);
 
-    const logout = () => {
-        localStorage.clear();
-        navigate("/");
-    };
-
     const modules = [
         { label: "Roles", path: "/roles", roles: ["Admin"] },
         { label: "User Management", path: "/users", roles: ["Admin"] },
@@ -64,34 +58,15 @@ function Dashboard() {
         { label: "Enrollment Management", path: "/enrollment", roles: ["Admin", "Trainer"] },
         { label: "Exams", path: "/exams", roles: ["Admin", "Trainer", "Student"] },
         { label: "Question Bank", path: "/questions", roles: ["Admin", "Trainer"] },
-        { label: "Exam Results", path: "/ExamResult", roles: ["Admin", "Trainer"] },
+        { label: "Exam Results", path: "/exam-results", roles: ["Admin", "Trainer"] },
         { label: "Statistics", path: "/statistics", roles: ["Admin", "Trainer"] },
     ];
 
     return (
         <div className="page">
 
-            {/* ---- Hero banner ---- */}
-            <div
-                className="card"
-                style={{
-                    marginBottom: 32,
-                    padding: 0,
-                    overflow: "hidden",
-                    border: "none",
-                    boxShadow: "var(--shadow)"
-                }}
-            >
-                <div style={{
-                    background: "var(--gradient-brand)",
-                    padding: "30px 32px",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    flexWrap: "wrap",
-                    gap: 16,
-                    color: "#fff"
-                }}>
+            <div className="card" style={{ marginBottom: 32, padding: 0, overflow: "hidden", border: "none", boxShadow: "var(--shadow)" }}>
+                <div style={{ background: "var(--gradient-brand)", padding: "30px 32px", color: "#fff" }}>
                     <div>
                         <p style={{ margin: 0, fontSize: 13, opacity: .85, fontWeight: 600, letterSpacing: ".02em", textTransform: "uppercase" }}>
                             {role}
@@ -99,17 +74,7 @@ function Dashboard() {
                         <h2 style={{ margin: "6px 0 0", color: "#fff", fontSize: 28 }}>
                             Welcome back, {name}
                         </h2>
-                        <p style={{ margin: "6px 0 0", opacity: .85, fontSize: 14 }}>
-                            {email}
-                        </p>
                     </div>
-                    <button
-                        className="btn"
-                        style={{ background: "rgba(255,255,255,.16)", color: "#fff", flexShrink: 0 }}
-                        onClick={logout}
-                    >
-                        Logout
-                    </button>
                 </div>
             </div>
 

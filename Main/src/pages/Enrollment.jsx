@@ -8,7 +8,6 @@ import {
 
 import { getUsers } from "../services/UserService";
 import { getCourses } from "../services/CourseService";
-import BackButton from "../components/BackButton";
 import ConfirmDialog from "../components/ConfirmDialog";
 import Toast from "../components/Toast";
 import SidePanel from "../components/SidePanel";
@@ -158,7 +157,6 @@ function Enrollment() {
 
             <div className="page-header">
                 <div>
-                    <BackButton />
                     <h2 style={{ marginTop: 12 }}>Enrollment Management</h2>
                 </div>
 

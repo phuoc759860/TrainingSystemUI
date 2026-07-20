@@ -1,0 +1,136 @@
+@reference "tailwindcss";
+
+/* Scrollspy links */
+[data-scrollspy-link].scrollspy-active {
+  @apply text-violet-500 font-medium;
+}
+
+/* Custom AOS animations */
+[data-aos="zoom-y-out"] {
+  transform: scaleX(1.03);
+  opacity: 0;
+  transition-property: transform, opacity;
+}
+
+@media screen {
+  html:not(.no-js) body [data-aos=fade-up] {
+    -webkit-transform: translate3d(0, 10px, 0);
+    transform: translate3d(0, 10px, 0);
+  }
+  html:not(.no-js) body [data-aos=fade-down] {
+    -webkit-transform: translate3d(0, -10px, 0);
+    transform: translate3d(0, -10px, 0);
+  }
+  html:not(.no-js) body [data-aos=fade-right] {
+    -webkit-transform: translate3d(-10px, 0, 0);
+    transform: translate3d(-10px, 0, 0);
+  }
+  html:not(.no-js) body [data-aos=fade-left] {
+    -webkit-transform: translate3d(10px, 0, 0);
+    transform: translate3d(10px, 0, 0);
+  }
+  html:not(.no-js) body [data-aos=fade-up-right] {
+    -webkit-transform: translate3d(-10px, 10px, 0);
+    transform: translate3d(-10px, 10px, 0);
+  }
+  html:not(.no-js) body [data-aos=fade-up-left] {
+    -webkit-transform: translate3d(10px, 10px, 0);
+    transform: translate3d(10px, 10px, 0);
+  }
+  html:not(.no-js) body [data-aos=fade-down-right] {
+    -webkit-transform: translate3d(-10px, -10px, 0);
+    transform: translate3d(-10px, -10px, 0);
+  }
+  html:not(.no-js) body [data-aos=fade-down-left] {
+    -webkit-transform: translate3d(10px, -10px, 0);
+    transform: translate3d(10px, -10px, 0);
+  }
+  html:not(.no-js) body [data-aos=zoom-in-up] {
+    -webkit-transform: translate3d(0, 10px, 0) scale(.6);
+    transform: translate3d(0, 10px, 0) scale(.6);
+  }
+  html:not(.no-js) body [data-aos=zoom-in-down] {
+    -webkit-transform: translate3d(0, -10px, 0) scale(.6);
+    transform: translate3d(0, -10px, 0) scale(.6);
+  }
+  html:not(.no-js) body [data-aos=zoom-in-right] {
+    -webkit-transform: translate3d(-10px, 0, 0) scale(.6);
+    transform: translate3d(-10px, 0, 0) scale(.6);
+  }
+  html:not(.no-js) body [data-aos=zoom-in-left] {
+    -webkit-transform: translate3d(10px, 0, 0) scale(.6);
+    transform: translate3d(10px, 0, 0) scale(.6);
+  }
+  html:not(.no-js) body [data-aos=zoom-out-up] {
+    -webkit-transform: translate3d(0, 10px, 0) scale(1.2);
+    transform: translate3d(0, 10px, 0) scale(1.2);
+  }
+  html:not(.no-js) body [data-aos=zoom-out-down] {
+    -webkit-transform: translate3d(0, -10px, 0) scale(1.2);
+    transform: translate3d(0, -10px, 0) scale(1.2);
+  }
+  html:not(.no-js) body [data-aos=zoom-out-right] {
+    -webkit-transform: translate3d(-10px, 0, 0) scale(1.2);
+    transform: translate3d(-10px, 0, 0) scale(1.2);
+  }
+  html:not(.no-js) body [data-aos=zoom-out-left] {
+    -webkit-transform: translate3d(10px, 0, 0) scale(1.2);
+    transform: translate3d(10px, 0, 0) scale(1.2);
+  }
+}
+
+/* Buttons - landing page specific (scoped to .landing prefixed classes to avoid conflict) */
+.landing-btn,
+.landing-btn-sm {
+  @apply text-sm font-medium inline-flex items-center justify-center rounded-lg whitespace-nowrap transition-all;
+}
+
+.landing-btn {
+  @apply px-4 py-[11px] shadow-lg;
+}
+
+.landing-btn-sm {
+  @apply px-3 py-[5px] shadow-sm;
+}
+
+/* Landing page form overrides */
+.landing-form input[type="search"]::-webkit-search-decoration,
+.landing-form input[type="search"]::-webkit-search-cancel-button,
+.landing-form input[type="search"]::-webkit-search-results-button,
+.landing-form input[type="search"]::-webkit-search-results-decoration {
+  -webkit-appearance: none;
+}
+
+.landing-form .form-input,
+.landing-form .form-textarea,
+.landing-form .form-multiselect,
+.landing-form .form-select,
+.landing-form .form-checkbox,
+.landing-form .form-radio {
+  @apply border border-gray-200 shadow-xs rounded-lg focus:ring-0 focus:ring-offset-0;
+}
+
+.landing-form .form-input,
+.landing-form .form-textarea,
+.landing-form .form-multiselect,
+.landing-form .form-select {
+  @apply bg-white text-sm py-2.5 px-4 focus:border-violet-300;
+}
+
+.landing-form .form-input,
+.landing-form .form-textarea {
+  @apply placeholder-gray-400;
+}
+
+.landing-form .form-select {
+  @apply pr-10;
+}
+
+.landing-form .form-checkbox,
+.landing-form .form-radio {
+  @apply text-gray-800 checked:bg-violet-500 checked:border-transparent focus-visible:not-checked:border-violet-300;
+}
+
+.landing-form .form-checkbox {
+  @apply rounded-xs;
+}

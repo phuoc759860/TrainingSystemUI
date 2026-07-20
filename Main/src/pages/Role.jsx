@@ -5,7 +5,6 @@ import {
     updateRole,
     deleteRole
 } from "../services/RoleService";
-import BackButton from "../components/BackButton";
 import ConfirmDialog from "../components/ConfirmDialog";
 import Toast from "../components/Toast";
 import SidePanel from "../components/SidePanel";
@@ -112,7 +111,6 @@ function Role() {
 
             <div className="page-header">
                 <div>
-                    <BackButton />
                     <h2 style={{ marginTop: 12 }}>Role Management</h2>
                 </div>
 

@@ -6,7 +6,6 @@ import {
     updateCourse,
     deleteCourse
 } from "../services/CourseService";
-import BackButton from "../components/BackButton";
 import ConfirmDialog from "../components/ConfirmDialog";
 import Toast from "../components/Toast";
 import SidePanel from "../components/SidePanel";
@@ -155,7 +154,6 @@ function Course() {
 
             <div className="page-header">
                 <div>
-                    <BackButton />
                     <h2 style={{ marginTop: 12 }}>Course Management</h2>
                 </div>
 

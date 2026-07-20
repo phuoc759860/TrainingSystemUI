@@ -1,11 +1,10 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
 import {
     getAvailableCourses,
     getClassOverview,
     getStudentDetail,
     getExamRanking
 } from "../services/StatisticsService";
-import BackButton from "../components/BackButton";
 import SidePanel from "../components/SidePanel";
 import Toast from "../components/Toast";
 import {
@@ -36,7 +35,6 @@ function initials(name) {
     return (parts[0][0] + (parts[1]?.[0] || "")).toUpperCase();
 }
 
-// Generic client-side sort — used by every sortable table on this page.
 function sortRows(rows, key, dir) {
     if (!key) return rows;
     const sorted = [...rows].sort((a, b) => {
@@ -62,21 +60,63 @@ function SortableTh({ label, sortKey, currentSort, onSort }) {
     );
 }
 
-function MiniBar({ value, max = 100 }) {
-    const pct = Math.max(0, Math.min(100, (value / max) * 100));
+function MiniBar({ value, max = 100, delay = 0 }) {
+    const [width, setWidth] = useState(0);
+    useEffect(() => {
+        const timer = setTimeout(() => setWidth(Math.max(0, Math.min(100, (value / max) * 100))), delay);
+        return () => clearTimeout(timer);
+    }, [value, max, delay]);
+
     return (
         <span className="mini-bar">
             <span
                 className="mini-bar-fill"
-                style={{ width: `${pct}%`, background: scoreColor(value) }}
+                style={{ width: `${width}%`, background: scoreColor(value) }}
             />
         </span>
     );
 }
 
-function ChartCard({ title, subtitle, children, height = 300 }) {
+function AnimatedNumber({ value, duration = 700 }) {
+    const [display, setDisplay] = useState(0);
+    const frameRef = useRef(null);
+    const prevValue = useRef(value);
+
+    useEffect(() => {
+        if (value == null) return;
+
+        const target = Number(value) || 0;
+        const startTime = performance.now();
+        const startValue = prevValue.current != null ? Number(prevValue.current) : 0;
+        prevValue.current = target;
+
+        const tick = (now) => {
+            const progress = Math.min((now - startTime) / duration, 1);
+            const eased = 1 - Math.pow(1 - progress, 3);
+            setDisplay(Math.round(startValue + (target - startValue) * eased));
+            if (progress < 1) {
+                frameRef.current = requestAnimationFrame(tick);
+            }
+        };
+
+        frameRef.current = requestAnimationFrame(tick);
+        return () => cancelAnimationFrame(frameRef.current);
+    }, [value, duration]);
+
+    if (value == null) return <>–</>;
+    return <>{display}</>;
+}
+
+function ChartCard({ title, subtitle, children, height = 300, delay = 0 }) {
     return (
-        <div className="card fade-in" style={{ marginBottom: 24 }}>
+        <div
+            className="card chart-card fade-in"
+            style={{
+                marginBottom: 24,
+                animationDelay: `${delay}ms`,
+                animationFillMode: "both"
+            }}
+        >
             <h3 style={{ marginTop: 0, marginBottom: subtitle ? 4 : 16, fontSize: 17 }}>{title}</h3>
             {subtitle && (
                 <p style={{ color: "var(--ink-soft)", fontSize: 13, marginTop: 0, marginBottom: 16 }}>
@@ -141,7 +181,7 @@ function KpiRow({ items }) {
             {items.map((item, i) => (
                 <div className="stat-card" key={i}>
                     <div className="num" style={item.color ? { color: item.color } : undefined}>
-                        {item.value}
+                        {typeof item.value === "number" ? <AnimatedNumber value={item.value} /> : item.value}
                     </div>
                     <div className="label">{item.label}</div>
                 </div>
@@ -152,7 +192,7 @@ function KpiRow({ items }) {
 
 function StatusBadge({ examsTaken, needsAttention }) {
     if (examsTaken === 0) return <span className="badge">No attempts</span>;
-    if (needsAttention) return <span className="badge badge-danger">Needs Attention</span>;
+    if (needsAttention) return <span className={`badge badge-danger ${needsAttention ? "badge-pulse" : ""}`}>Needs Attention</span>;
     return <span className="badge badge-success">On Track</span>;
 }
 
@@ -222,13 +262,11 @@ function Statistics() {
     useEffect(() => {
         if (classCourseId) loadClassOverview();
         else setClassStudents([]);
-        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [classCourseId]);
 
     useEffect(() => {
         if (examCourseId) loadExamRanking();
         else setExamRanking([]);
-        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [examCourseId]);
 
     const loadCourses = async () => {
@@ -244,7 +282,7 @@ function Statistics() {
     const loadAllStudents = async () => {
         setStudentsLoading(true);
         try {
-            const res = await getClassOverview(); // no courseId = every accessible course
+            const res = await getClassOverview();
             setAllStudents(res.data);
         }
         catch {
@@ -385,7 +423,6 @@ function Statistics() {
 
             <div className="page-header">
                 <div>
-                    <BackButton />
                     <h2 style={{ marginTop: 12 }}>Performance Statistics</h2>
                     <p style={{ color: "var(--ink-soft)", margin: "4px 0 0" }}>
                         See how your class is doing and where to focus next.
@@ -408,7 +445,7 @@ function Statistics() {
 
             {/* ================= CLASS TAB ================= */}
             {activeTab === "class" && (
-                <>
+                <div className="tab-content" key="class">
                     <CourseSelect
                         courses={courses}
                         value={classCourseId}
@@ -435,6 +472,7 @@ function Statistics() {
                                             title="Class Score Distribution"
                                             subtitle="Average score per student, lowest to highest"
                                             height={Math.max(220, classChartData.length * 34)}
+                                            delay={50}
                                         >
                                             <ResponsiveContainer width="100%" height="100%">
                                                 <BarChart data={classChartData} layout="vertical" margin={{ top: 4, right: 30, left: 8, bottom: 4 }}>
@@ -442,7 +480,11 @@ function Statistics() {
                                                     <XAxis type="number" domain={[0, 100]} tick={{ fontSize: 12, fill: INK_SOFT }} />
                                                     <YAxis type="category" dataKey="name" width={110} tick={{ fontSize: 12, fill: INK_SOFT }} />
                                                     <Tooltip content={<CustomTooltip />} labelFormatter={(_, p) => p?.[0]?.payload?.fullName} />
-                                                    <Bar dataKey="score" name="Average Score" radius={[0, 6, 6, 0]}>
+                                                    <Bar dataKey="score" name="Average Score" radius={[0, 6, 6, 0]}
+                                                        animationBegin={100}
+                                                        animationDuration={800}
+                                                        animationEasing="ease-out"
+                                                    >
                                                         {classChartData.map((entry, i) => (
                                                             <Cell key={i} fill={scoreColor(entry.score)} />
                                                         ))}
@@ -454,7 +496,7 @@ function Statistics() {
                                     )}
 
                                     {passFailData.length > 0 && (
-                                        <ChartCard title="On Track vs Needs Attention" height={Math.max(220, classChartData.length * 34)}>
+                                        <ChartCard title="On Track vs Needs Attention" height={Math.max(220, classChartData.length * 34)} delay={150}>
                                             <ResponsiveContainer width="100%" height="100%">
                                                 <PieChart>
                                                     <Tooltip content={<CustomTooltip unit=" students" />} />
@@ -465,6 +507,9 @@ function Statistics() {
                                                         innerRadius="60%"
                                                         outerRadius="85%"
                                                         paddingAngle={3}
+                                                        animationBegin={200}
+                                                        animationDuration={1000}
+                                                        animationEasing="ease-out"
                                                     >
                                                         {passFailData.map((entry, i) => (
                                                             <Cell key={i} fill={entry.fill} />
@@ -501,11 +546,12 @@ function Statistics() {
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {classFiltered.map(s => (
+                                    {classFiltered.map((s, i) => (
                                         <tr
                                             key={s.userID}
                                             className={s.examsTaken > 0 ? "clickable-row" : ""}
                                             onClick={() => s.examsTaken > 0 && openStudent(s.userID)}
+                                            style={{ animationDelay: `${i * 20}ms` }}
                                         >
                                             <td className="name-cell">
                                                 <span className="avatar-chip">{initials(s.name)}</span>
@@ -515,7 +561,7 @@ function Statistics() {
                                             <td>
                                                 {s.examsTaken > 0 ? (
                                                     <>
-                                                        <MiniBar value={s.averageScore} />
+                                                        <MiniBar value={s.averageScore} delay={300 + i * 20} />
                                                         {s.averageScore}%
                                                     </>
                                                 ) : "—"}
@@ -530,12 +576,12 @@ function Statistics() {
                             </table>
                         </>
                     )}
-                </>
+                </div>
             )}
 
             {/* ================= STUDENTS TAB ================= */}
             {activeTab === "students" && (
-                <>
+                <div className="tab-content" key="students">
                     <KpiRow items={studentKpis} />
 
                     <div style={{ display: "flex", gap: 12, alignItems: "flex-end", marginBottom: 20, flexWrap: "wrap" }}>
@@ -576,11 +622,12 @@ function Statistics() {
                                 </tr>
                             </thead>
                             <tbody>
-                                {filteredStudents.map(s => (
+                                {filteredStudents.map((s, i) => (
                                     <tr
                                         key={s.userID}
                                         className={s.examsTaken > 0 ? "clickable-row" : ""}
                                         onClick={() => s.examsTaken > 0 && openStudent(s.userID)}
+                                        style={{ animationDelay: `${i * 20}ms` }}
                                     >
                                         <td className="name-cell">
                                             <span className="avatar-chip">{initials(s.name)}</span>
@@ -590,7 +637,7 @@ function Statistics() {
                                         <td>
                                             {s.examsTaken > 0 ? (
                                                 <>
-                                                    <MiniBar value={s.averageScore} />
+                                                    <MiniBar value={s.averageScore} delay={300 + i * 20} />
                                                     {s.averageScore}%
                                                 </>
                                             ) : "—"}
@@ -604,12 +651,12 @@ function Statistics() {
                             </tbody>
                         </table>
                     )}
-                </>
+                </div>
             )}
 
             {/* ================= EXAM RANKING TAB ================= */}
             {activeTab === "exams" && (
-                <>
+                <div className="tab-content" key="exams">
                     <CourseSelect
                         courses={courses}
                         value={examCourseId}
@@ -633,6 +680,7 @@ function Statistics() {
                                 title="Exam Ranking"
                                 subtitle="Average score per exam, highest to lowest"
                                 height={Math.max(220, examChartData.length * 38)}
+                                delay={50}
                             >
                                 <ResponsiveContainer width="100%" height="100%">
                                     <BarChart data={examChartData} layout="vertical" margin={{ top: 4, right: 30, left: 8, bottom: 4 }}>
@@ -640,7 +688,11 @@ function Statistics() {
                                         <XAxis type="number" domain={[0, 100]} tick={{ fontSize: 12, fill: INK_SOFT }} />
                                         <YAxis type="category" dataKey="name" width={170} tick={{ fontSize: 11, fill: INK_SOFT }} />
                                         <Tooltip content={<CustomTooltip />} labelFormatter={(_, p) => p?.[0]?.payload?.fullName} />
-                                        <Bar dataKey="score" name="Average Score" radius={[0, 6, 6, 0]}>
+                                        <Bar dataKey="score" name="Average Score" radius={[0, 6, 6, 0]}
+                                            animationBegin={100}
+                                            animationDuration={800}
+                                            animationEasing="ease-out"
+                                        >
                                             {examChartData.map((entry, i) => (
                                                 <Cell key={i} fill={scoreColor(entry.score)} />
                                             ))}
@@ -662,12 +714,12 @@ function Statistics() {
                                 </thead>
                                 <tbody>
                                     {examRanking.map((e, i) => (
-                                        <tr key={e.examID}>
+                                        <tr key={e.examID} style={{ animationDelay: `${i * 20}ms` }}>
                                             <td style={{ fontWeight: 700 }}>{rankMedal(i + 1)}</td>
                                             <td style={{ fontWeight: 600 }}>{e.examTitle}</td>
                                             <td>{e.attemptCount}</td>
                                             <td>
-                                                <MiniBar value={e.averageScore} />
+                                                <MiniBar value={e.averageScore} delay={300 + i * 20} />
                                                 <span className={`badge ${e.averageScore < 50 ? "badge-danger" : "badge-success"}`}>
                                                     {e.averageScore}%
                                                 </span>
@@ -679,10 +731,10 @@ function Statistics() {
                             </table>
                         </>
                     )}
-                </>
+                </div>
             )}
 
-            {/* ---- Shared student detail panel (used by Class + Students tabs) ---- */}
+            {/* ---- Shared student detail panel ---- */}
             <SidePanel
                 open={panelOpen}
                 title={detail ? detail.name : "Student Details"}
@@ -728,7 +780,10 @@ function Statistics() {
                                             <XAxis type="number" domain={[0, 100]} tick={{ fontSize: 11, fill: INK_SOFT }} />
                                             <YAxis type="category" dataKey="name" width={100} tick={{ fontSize: 11, fill: INK_SOFT }} />
                                             <Tooltip content={<CustomTooltip />} labelFormatter={(_, p) => p?.[0]?.payload?.fullName} />
-                                            <Bar dataKey="score" name="Average Score" radius={[0, 6, 6, 0]}>
+                                            <Bar dataKey="score" name="Average Score" radius={[0, 6, 6, 0]}
+                                                animationBegin={100}
+                                                animationDuration={600}
+                                            >
                                                 {courseBreakdownData.map((entry, i) => (
                                                     <Cell key={i} fill={scoreColor(entry.score)} />
                                                 ))}
@@ -750,7 +805,10 @@ function Statistics() {
                                             <XAxis type="number" domain={[0, 100]} tick={{ fontSize: 11, fill: INK_SOFT }} />
                                             <YAxis type="category" dataKey="name" width={100} tick={{ fontSize: 11, fill: INK_SOFT }} />
                                             <Tooltip content={<CustomTooltip />} />
-                                            <Bar dataKey="score" name="Score" radius={[0, 6, 6, 0]}>
+                                            <Bar dataKey="score" name="Score" radius={[0, 6, 6, 0]}
+                                                animationBegin={100}
+                                                animationDuration={600}
+                                            >
                                                 {skillTypeData.map((entry, i) => (
                                                     <Cell key={i} fill={scoreColor(entry.score)} />
                                                 ))}

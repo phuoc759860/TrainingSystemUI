@@ -8,7 +8,6 @@ import {
 } from "../services/QuestionService";
 
 import { getExams } from "../services/ExamService";
-import BackButton from "../components/BackButton";
 import ConfirmDialog from "../components/ConfirmDialog";
 import Toast from "../components/Toast";
 import SidePanel from "../components/SidePanel";
@@ -317,7 +316,6 @@ function Question() {
 
             <div className="page-header">
                 <div>
-                    <BackButton />
                     <h2 style={{ marginTop: 12 }}>Question Bank Management</h2>
                 </div>
 

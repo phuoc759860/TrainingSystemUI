@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { getExam, submitExam } from "../services/ExamService";
 import { getQuestions } from "../services/QuestionService";
-import BackButton from "../components/BackButton";
+import Toast from "../components/Toast";
 
 function TakeExam() {
     const { examId } = useParams();
@@ -14,10 +14,10 @@ function TakeExam() {
     const [result, setResult] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
+    const [toast, setToast] = useState(null);
 
     useEffect(() => {
         loadExam();
-        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [examId]);
 
     const loadExam = async () => {
@@ -45,7 +45,6 @@ function TakeExam() {
     };
 
     const handleSubmit = async () => {
-
         const unanswered = questions.filter(q => !answers[q.questionID]?.trim());
 
         if (unanswered.length > 0) {
@@ -69,7 +68,7 @@ function TakeExam() {
         }
         catch (err) {
             console.log(err);
-            alert("Failed to submit exam.");
+            setToast({ message: "Failed to submit exam.", type: "error" });
         }
         finally {
             setSubmitting(false);
@@ -79,7 +78,6 @@ function TakeExam() {
     if (loading) {
         return (
             <div className="page">
-                <BackButton to="/exams" />
                 <p>Loading exam...</p>
             </div>
         );
@@ -88,7 +86,6 @@ function TakeExam() {
     if (error) {
         return (
             <div className="page">
-                <BackButton to="/exams" />
                 <p style={{ color: "var(--danger)" }}>{error}</p>
             </div>
         );
@@ -97,8 +94,6 @@ function TakeExam() {
     if (result) {
         return (
             <div className="page">
-                <BackButton to="/exams" />
-
                 <div className="card" style={{ marginTop: 16, marginBottom: 24, textAlign: "center" }}>
                     <h2 style={{ marginTop: 0 }}>{exam?.title} — Results</h2>
 
@@ -165,7 +160,6 @@ function TakeExam() {
 
             <div className="page-header">
                 <div>
-                    <BackButton to="/exams" />
                     <h2 style={{ marginTop: 12 }}>{exam?.title}</h2>
                     <p style={{ color: "var(--ink-soft)", margin: "4px 0 0" }}>{exam?.courseTitle}</p>
                 </div>
@@ -225,6 +219,8 @@ function TakeExam() {
                     {submitting ? "Submitting..." : "Submit Exam"}
                 </button>
             )}
+
+            <Toast toast={toast} onDone={() => setToast(null)} />
         </div>
     );
 }

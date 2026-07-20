@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { getExamAttempt, gradeExamAttempt } from "../services/ExamResultService";
-import BackButton from "../components/BackButton";
+import Toast from "../components/Toast";
 
 function GradeAttempt() {
     const { id } = useParams();
@@ -10,10 +10,10 @@ function GradeAttempt() {
     const [attempt, setAttempt] = useState(null);
     const [points, setPoints] = useState({});
     const [saving, setSaving] = useState(false);
+    const [toast, setToast] = useState(null);
 
     useEffect(() => {
         load();
-        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [id]);
 
     const load = async () => {
@@ -45,12 +45,12 @@ function GradeAttempt() {
             };
 
             await gradeExamAttempt(id, payload);
-            alert("Grading saved.");
-            navigate("/ExamResult");
+            setToast({ message: "Grading saved.", type: "success" });
+            setTimeout(() => navigate("/exam-results"), 800);
         }
         catch (err) {
             console.log(err);
-            alert("Failed to save grading.");
+            setToast({ message: "Failed to save grading.", type: "error" });
         }
         finally {
             setSaving(false);
@@ -60,7 +60,6 @@ function GradeAttempt() {
     if (!attempt) {
         return (
             <div className="page">
-                <BackButton to="/ExamResult" />
                 <p>Loading attempt...</p>
             </div>
         );
@@ -70,7 +69,6 @@ function GradeAttempt() {
         <div className="page">
             <div className="page-header">
                 <div>
-                    <BackButton to="/ExamResult" />
                     <h2 style={{ marginTop: 12 }}>{attempt.examTitle}</h2>
                     <p style={{ color: "var(--ink-soft)", margin: "4px 0 0" }}>
                         {attempt.userName} · Submitted {new Date(attempt.submittedAt).toLocaleString()}
@@ -135,6 +133,8 @@ function GradeAttempt() {
             <button className="btn btn-primary" onClick={handleSave} disabled={saving}>
                 {saving ? "Saving..." : "Save Grading"}
             </button>
+
+            <Toast toast={toast} onDone={() => setToast(null)} />
         </div>
     );
 }

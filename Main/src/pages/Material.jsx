@@ -6,7 +6,6 @@ import {
     deleteMaterial
 } from "../services/MaterialService";
 import { getLessons } from "../services/LessonService";
-import BackButton from "../components/BackButton";
 import ConfirmDialog from "../components/ConfirmDialog";
 import Toast from "../components/Toast";
 import SidePanel from "../components/SidePanel";
@@ -154,7 +153,6 @@ function Material() {
 
             <div className="page-header">
                 <div>
-                    <BackButton />
                     <h2 style={{ marginTop: 12 }}>Material Management</h2>
                 </div>
 

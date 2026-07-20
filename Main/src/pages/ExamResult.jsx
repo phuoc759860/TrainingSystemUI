@@ -3,7 +3,6 @@ import { useNavigate } from "react-router-dom";
 import { getExamResults, createExamResult, updateExamResult, deleteExamResult } from "../services/ExamResultService";
 import { getUsers } from "../services/UserService";
 import { getExams } from "../services/ExamService";
-import BackButton from "../components/BackButton";
 import ConfirmDialog from "../components/ConfirmDialog";
 import Toast from "../components/Toast";
 import SidePanel from "../components/SidePanel";
@@ -112,7 +111,6 @@ function ExamResult() {
         <div className="page">
             <div className="page-header">
                 <div>
-                    <BackButton />
                     <h2 style={{ marginTop: 12 }}>Exam Result Management</h2>
                 </div>
 
