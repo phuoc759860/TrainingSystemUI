@@ -130,6 +130,29 @@ function ChartCard({ title, subtitle, children, height = 300, delay = 0 }) {
     );
 }
 
+// Animated "growing bars" placeholder shown for ~1s while a chart's data loads
+function ChartSkeleton({ rows = 5, height }) {
+    const widths = useMemo(
+        () => Array.from({ length: rows }, () => 30 + Math.random() * 60),
+        [rows]
+    );
+    return (
+        <div className="chart-skeleton" style={{ height }}>
+            {widths.map((w, i) => (
+                <div className="chart-skeleton-row" key={i}>
+                    <span className="chart-skeleton-label" />
+                    <span className="chart-skeleton-bar-track">
+                        <span
+                            className="chart-skeleton-bar-fill"
+                            style={{ width: `${w}%`, animationDelay: `${i * 80}ms` }}
+                        />
+                    </span>
+                </div>
+            ))}
+        </div>
+    );
+}
+
 function CustomTooltip({ active, payload, label, unit = "%" }) {
     if (!active || !payload || !payload.length) return null;
     return (
@@ -456,9 +479,9 @@ function Statistics() {
                     {!classCourseId ? (
                         <EmptyPrompt icon="🏫" text="Select a course above to view its class statistics." />
                     ) : classLoading ? (
-                        <div className="loading-row">
-                            <span className="spinner" /> Loading class statistics...
-                        </div>
+                        <ChartCard title="Class Score Distribution" height={260}>
+                            <ChartSkeleton rows={6} height={220} />
+                        </ChartCard>
                     ) : classStudents.length === 0 ? (
                         <EmptyPrompt icon="📈" text="No enrolled students in this course yet." />
                     ) : (
@@ -481,8 +504,8 @@ function Statistics() {
                                                     <YAxis type="category" dataKey="name" width={110} tick={{ fontSize: 12, fill: INK_SOFT }} />
                                                     <Tooltip content={<CustomTooltip />} labelFormatter={(_, p) => p?.[0]?.payload?.fullName} />
                                                     <Bar dataKey="score" name="Average Score" radius={[0, 6, 6, 0]}
-                                                        animationBegin={100}
-                                                        animationDuration={800}
+                                                        animationBegin={150}
+                                                        animationDuration={1400}
                                                         animationEasing="ease-out"
                                                     >
                                                         {classChartData.map((entry, i) => (
@@ -507,8 +530,8 @@ function Statistics() {
                                                         innerRadius="60%"
                                                         outerRadius="85%"
                                                         paddingAngle={3}
-                                                        animationBegin={200}
-                                                        animationDuration={1000}
+                                                        animationBegin={350}
+                                                        animationDuration={1400}
                                                         animationEasing="ease-out"
                                                     >
                                                         {passFailData.map((entry, i) => (
@@ -667,9 +690,9 @@ function Statistics() {
                     {!examCourseId ? (
                         <EmptyPrompt icon="🏆" text="Select a course above to see its exams ranked by performance." />
                     ) : examLoading ? (
-                        <div className="loading-row">
-                            <span className="spinner" /> Loading exam ranking...
-                        </div>
+                        <ChartCard title="Exam Ranking" height={260}>
+                            <ChartSkeleton rows={6} height={220} />
+                        </ChartCard>
                     ) : examRanking.length === 0 ? (
                         <EmptyPrompt icon="🗒️" text="No graded attempts for this course's exams yet." />
                     ) : (
@@ -690,7 +713,7 @@ function Statistics() {
                                         <Tooltip content={<CustomTooltip />} labelFormatter={(_, p) => p?.[0]?.payload?.fullName} />
                                         <Bar dataKey="score" name="Average Score" radius={[0, 6, 6, 0]}
                                             animationBegin={100}
-                                            animationDuration={800}
+                                            animationDuration={1000}
                                             animationEasing="ease-out"
                                         >
                                             {examChartData.map((entry, i) => (
@@ -743,9 +766,7 @@ function Statistics() {
                 footer={<button className="btn btn-outline" onClick={closePanel}>Close</button>}
             >
                 {detailLoading ? (
-                    <div className="loading-row">
-                        <span className="spinner" /> Loading...
-                    </div>
+                    <ChartSkeleton rows={4} height={160} />
                 ) : detail && (
                     <>
                         <div className="stat-grid" style={{ marginBottom: 22 }}>
@@ -781,8 +802,9 @@ function Statistics() {
                                             <YAxis type="category" dataKey="name" width={100} tick={{ fontSize: 11, fill: INK_SOFT }} />
                                             <Tooltip content={<CustomTooltip />} labelFormatter={(_, p) => p?.[0]?.payload?.fullName} />
                                             <Bar dataKey="score" name="Average Score" radius={[0, 6, 6, 0]}
-                                                animationBegin={100}
-                                                animationDuration={600}
+                                                animationBegin={150}
+                                                animationDuration={1400}
+                                                animationEasing="ease-out"
                                             >
                                                 {courseBreakdownData.map((entry, i) => (
                                                     <Cell key={i} fill={scoreColor(entry.score)} />
@@ -806,8 +828,9 @@ function Statistics() {
                                             <YAxis type="category" dataKey="name" width={100} tick={{ fontSize: 11, fill: INK_SOFT }} />
                                             <Tooltip content={<CustomTooltip />} />
                                             <Bar dataKey="score" name="Score" radius={[0, 6, 6, 0]}
-                                                animationBegin={100}
-                                                animationDuration={600}
+                                                animationBegin={150}
+                                                animationDuration={1400}
+                                                animationEasing="ease-out"
                                             >
                                                 {skillTypeData.map((entry, i) => (
                                                     <Cell key={i} fill={scoreColor(entry.score)} />
@@ -824,7 +847,7 @@ function Statistics() {
                             <>
                                 <h4 style={{ margin: "22px 0 10px" }}>Lowest-Scoring Exams</h4>
                                 {detail.weakestExams.map(e => (
-                                    <div key={e.examID} style={{ display: "flex", justifyContent: "space-between", padding: "8px 0", borderBottom: "1px solid var(--border)" }}>
+                                    <div key={`weak-${e.examID}`} style={{ display: "flex", justifyContent: "space-between", padding: "8px 0", borderBottom: "1px solid var(--border)" }}>
                                         <span>{e.examTitle}</span>
                                         <span className="badge badge-danger">{e.score}%</span>
                                     </div>
@@ -836,7 +859,7 @@ function Statistics() {
                             <>
                                 <h4 style={{ margin: "22px 0 10px" }}>Highest-Scoring Exams</h4>
                                 {detail.strongestExams.map(e => (
-                                    <div key={e.examID} style={{ display: "flex", justifyContent: "space-between", padding: "8px 0", borderBottom: "1px solid var(--border)" }}>
+                                    <div key={`strong-${e.examID}`} style={{ display: "flex", justifyContent: "space-between", padding: "8px 0", borderBottom: "1px solid var(--border)" }}>
                                         <span>{e.examTitle}</span>
                                         <span className="badge badge-success">{e.score}%</span>
                                     </div>
