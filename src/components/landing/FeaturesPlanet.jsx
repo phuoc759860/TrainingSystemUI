@@ -8,7 +8,7 @@ const features = [
         <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" />
         <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" />
       </>
-    )
+    ),
   },
   {
     title: "Exam System",
@@ -16,11 +16,21 @@ const features = [
       "Build exams with multiple-choice and essay questions. MC questions are auto-graded, essays flagged for trainer review.",
     icon: (
       <>
-        <path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2" fill="none" stroke="currentColor" strokeWidth="2" />
+        <path
+          d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+        />
         <rect x="9" y="3" width="6" height="4" rx="1" />
-        <path d="m9 14 2 2 4-4" fill="none" stroke="currentColor" strokeWidth="2" />
+        <path
+          d="m9 14 2 2 4-4"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+        />
       </>
-    )
+    ),
   },
   {
     title: "Student Enrollment",
@@ -28,12 +38,34 @@ const features = [
       "Enroll students into courses, track enrollment status, and manage who has access to what content.",
     icon: (
       <>
-        <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" fill="none" stroke="currentColor" strokeWidth="2" />
-        <circle cx="9" cy="7" r="4" fill="none" stroke="currentColor" strokeWidth="2" />
-        <path d="M22 21v-2a4 4 0 0 0-3-3.87" fill="none" stroke="currentColor" strokeWidth="2" />
-        <path d="M16 3.13a4 4 0 0 1 0 7.75" fill="none" stroke="currentColor" strokeWidth="2" />
+        <path
+          d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+        />
+        <circle
+          cx="9"
+          cy="7"
+          r="4"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+        />
+        <path
+          d="M22 21v-2a4 4 0 0 0-3-3.87"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+        />
+        <path
+          d="M16 3.13a4 4 0 0 1 0 7.75"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+        />
       </>
-    )
+    ),
   },
   {
     title: "Learning Materials",
@@ -41,12 +73,36 @@ const features = [
       "Upload and organize PDFs, presentations, and resources for each lesson to keep students engaged.",
     icon: (
       <>
-        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" fill="none" stroke="currentColor" strokeWidth="2" />
-        <polyline points="14 2 14 8 20 8" fill="none" stroke="currentColor" strokeWidth="2" />
-        <line x1="16" y1="13" x2="8" y2="13" stroke="currentColor" strokeWidth="2" />
-        <line x1="16" y1="17" x2="8" y2="17" stroke="currentColor" strokeWidth="2" />
+        <path
+          d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+        />
+        <polyline
+          points="14 2 14 8 20 8"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+        />
+        <line
+          x1="16"
+          y1="13"
+          x2="8"
+          y2="13"
+          stroke="currentColor"
+          strokeWidth="2"
+        />
+        <line
+          x1="16"
+          y1="17"
+          x2="8"
+          y2="17"
+          stroke="currentColor"
+          strokeWidth="2"
+        />
       </>
-    )
+    ),
   },
   {
     title: "Statistics & Analytics",
@@ -58,7 +114,7 @@ const features = [
         <path d="M12 20V4" fill="none" stroke="currentColor" strokeWidth="2" />
         <path d="M6 20v-6" fill="none" stroke="currentColor" strokeWidth="2" />
       </>
-    )
+    ),
   },
   {
     title: "Role-Based Access",
@@ -66,10 +122,15 @@ const features = [
       "Admin, Trainer, and Student roles with tailored permissions and personalized dashboards for each user type.",
     icon: (
       <>
-        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" fill="none" stroke="currentColor" strokeWidth="2" />
+        <path
+          d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+        />
       </>
-    )
-  }
+    ),
+  },
 ];
 
 export default function FeaturesPlanet() {
@@ -90,24 +151,24 @@ export default function FeaturesPlanet() {
             {features.map((f, i) => (
               <li
                 key={f.title}
-                className="group grid grid-cols-[3rem_2.5rem_1fr] items-start gap-x-4 py-6 transition-colors hover:bg-gray-800/40 sm:grid-cols-[3rem_2.5rem_1fr_16rem]"
+                className="group grid grid-cols-[2.5rem_1fr] items-start gap-x-4 py-6 transition-colors hover:bg-gray-800/40 sm:grid-cols-[2.5rem_1fr_16rem]"
                 data-aos="fade-up"
                 data-aos-delay={i * 60}
               >
-                <span className="font-mono text-sm text-gray-600 tabular-nums">
-                  {String(i + 1).padStart(2, "0")}
+                <span className="mt-0.5 flex h-8 w-8 items-center justify-center rounded-lg bg-violet-500/15 text-violet-400">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width={18}
+                    height={18}
+                    viewBox="0 0 24 24"
+                    fill="currentColor"
+                  >
+                    {f.icon}
+                  </svg>
                 </span>
-                <svg
-                  className="mt-0.5 text-violet-400"
-                  xmlns="http://www.w3.org/2000/svg"
-                  width={20}
-                  height={20}
-                  viewBox="0 0 24 24"
-                  fill="currentColor"
-                >
-                  {f.icon}
-                </svg>
-                <h3 className="font-medium text-gray-100 sm:col-span-1">{f.title}</h3>
+                <h3 className="font-medium text-gray-100 sm:col-span-1">
+                  {f.title}
+                </h3>
                 <p className="text-[14px] leading-relaxed text-gray-400">
                   {f.description}
                 </p>

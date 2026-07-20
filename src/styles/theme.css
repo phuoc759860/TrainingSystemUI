@@ -494,7 +494,7 @@
 
 @media (prefers-reduced-motion: reduce) {
   .card, .table-modern tr td, .btn, .module-card, .modal-backdrop, .modal-card,
-  .toast, .spinner, .fade-in, .chevron, .panel, .panel-backdrop { animation: none !important; transition: none !important; }
+  .toast, .chevron, .panel, .panel-backdrop { animation: none !important; transition: none !important; }
 }
 
 /* ---------------- Slide-in panel ---------------- */

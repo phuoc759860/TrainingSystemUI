@@ -37,7 +37,7 @@ function App() {
 
     return (
 
-        <BrowserRouter basename="/Education_System">
+        <BrowserRouter basename={import.meta.env.PROD ? "/Education_System" : ""}>
 
             <Routes>
                 <Route path="/" element={<Landing />} />

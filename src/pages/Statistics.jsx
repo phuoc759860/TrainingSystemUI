@@ -18,6 +18,44 @@ const BRAND_LIGHT = "#8b7ffb";
 const DANGER = "#e34a4a";
 const INK_SOFT = "#6b7089";
 
+function usePrefersReducedMotion() {
+    const [reduced, setReduced] = useState(
+        () => window.matchMedia("(prefers-reduced-motion: reduce)").matches
+    );
+    useEffect(() => {
+        const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
+        const handler = (e) => setReduced(e.matches);
+        mq.addEventListener("change", handler);
+        return () => mq.removeEventListener("change", handler);
+    }, []);
+    return reduced;
+}
+
+// Horizontal gradients so bars read as lit from the left rather than flat fills.
+function ScoreGradientDefs() {
+    return (
+        <defs>
+            <linearGradient id="gradSuccess" x1="0" y1="0" x2="1" y2="0">
+                <stop offset="0%" stopColor={SUCCESS} stopOpacity={0.75} />
+                <stop offset="100%" stopColor={SUCCESS} />
+            </linearGradient>
+            <linearGradient id="gradBrand" x1="0" y1="0" x2="1" y2="0">
+                <stop offset="0%" stopColor={BRAND_LIGHT} stopOpacity={0.8} />
+                <stop offset="100%" stopColor={BRAND} />
+            </linearGradient>
+            <linearGradient id="gradDanger" x1="0" y1="0" x2="1" y2="0">
+                <stop offset="0%" stopColor={DANGER} stopOpacity={0.75} />
+                <stop offset="100%" stopColor={DANGER} />
+            </linearGradient>
+        </defs>
+    );
+}
+function scoreFill(value) {
+    if (value >= 70) return "url(#gradSuccess)";
+    if (value >= 50) return "url(#gradBrand)";
+    return "url(#gradDanger)";
+}
+
 function scoreColor(value) {
     if (value >= 70) return SUCCESS;
     if (value >= 50) return BRAND;
@@ -226,6 +264,8 @@ const TABS = [
 ];
 
 function Statistics() {
+
+    const reducedMotion = usePrefersReducedMotion();
 
     const [activeTab, setActiveTab] = useState("class");
     const [courses, setCourses] = useState([]);
@@ -498,18 +538,20 @@ function Statistics() {
                                             delay={50}
                                         >
                                             <ResponsiveContainer width="100%" height="100%">
-                                                <BarChart data={classChartData} layout="vertical" margin={{ top: 4, right: 30, left: 8, bottom: 4 }}>
+                                                <BarChart data={classChartData} key={classCourseId} layout="vertical" margin={{ top: 4, right: 30, left: 8, bottom: 4 }}>
+                                                    <ScoreGradientDefs />
                                                     <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" horizontal={false} />
                                                     <XAxis type="number" domain={[0, 100]} tick={{ fontSize: 12, fill: INK_SOFT }} />
                                                     <YAxis type="category" dataKey="name" width={110} tick={{ fontSize: 12, fill: INK_SOFT }} />
-                                                    <Tooltip content={<CustomTooltip />} labelFormatter={(_, p) => p?.[0]?.payload?.fullName} />
+                                                    <Tooltip content={<CustomTooltip />} labelFormatter={(_, p) => p?.[0]?.payload?.fullName} cursor={{ fill: "var(--brand-bg)" }} />
                                                     <Bar dataKey="score" name="Average Score" radius={[0, 6, 6, 0]}
+                                                        isAnimationActive={!reducedMotion}
                                                         animationBegin={150}
                                                         animationDuration={1400}
                                                         animationEasing="ease-out"
                                                     >
                                                         {classChartData.map((entry, i) => (
-                                                            <Cell key={i} fill={scoreColor(entry.score)} />
+                                                            <Cell key={i} fill={scoreFill(entry.score)} />
                                                         ))}
                                                         <LabelList dataKey="score" position="right" formatter={(v) => `${v}%`} style={{ fontSize: 12, fill: "var(--ink)" }} />
                                                     </Bar>
@@ -521,7 +563,7 @@ function Statistics() {
                                     {passFailData.length > 0 && (
                                         <ChartCard title="On Track vs Needs Attention" height={Math.max(220, classChartData.length * 34)} delay={150}>
                                             <ResponsiveContainer width="100%" height="100%">
-                                                <PieChart>
+                                                <PieChart key={classCourseId}>
                                                     <Tooltip content={<CustomTooltip unit=" students" />} />
                                                     <Pie
                                                         data={passFailData}
@@ -530,6 +572,7 @@ function Statistics() {
                                                         innerRadius="60%"
                                                         outerRadius="85%"
                                                         paddingAngle={3}
+                                                        isAnimationActive={!reducedMotion}
                                                         animationBegin={350}
                                                         animationDuration={1400}
                                                         animationEasing="ease-out"
@@ -706,18 +749,20 @@ function Statistics() {
                                 delay={50}
                             >
                                 <ResponsiveContainer width="100%" height="100%">
-                                    <BarChart data={examChartData} layout="vertical" margin={{ top: 4, right: 30, left: 8, bottom: 4 }}>
+                                    <BarChart data={examChartData} key={examCourseId} layout="vertical" margin={{ top: 4, right: 30, left: 8, bottom: 4 }}>
+                                        <ScoreGradientDefs />
                                         <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" horizontal={false} />
                                         <XAxis type="number" domain={[0, 100]} tick={{ fontSize: 12, fill: INK_SOFT }} />
                                         <YAxis type="category" dataKey="name" width={170} tick={{ fontSize: 11, fill: INK_SOFT }} />
-                                        <Tooltip content={<CustomTooltip />} labelFormatter={(_, p) => p?.[0]?.payload?.fullName} />
+                                        <Tooltip content={<CustomTooltip />} labelFormatter={(_, p) => p?.[0]?.payload?.fullName} cursor={{ fill: "var(--brand-bg)" }} />
                                         <Bar dataKey="score" name="Average Score" radius={[0, 6, 6, 0]}
+                                            isAnimationActive={!reducedMotion}
                                             animationBegin={100}
                                             animationDuration={1000}
                                             animationEasing="ease-out"
                                         >
                                             {examChartData.map((entry, i) => (
-                                                <Cell key={i} fill={scoreColor(entry.score)} />
+                                                <Cell key={i} fill={scoreFill(entry.score)} />
                                             ))}
                                             <LabelList dataKey="score" position="right" formatter={(v) => `${v}%`} style={{ fontSize: 12, fill: "var(--ink)" }} />
                                         </Bar>
@@ -796,18 +841,20 @@ function Statistics() {
                                 <h4 style={{ marginBottom: 10 }}>Score by Enrolled Course</h4>
                                 <div style={{ width: "100%", height: Math.max(140, courseBreakdownData.length * 42) }}>
                                     <ResponsiveContainer width="100%" height="100%">
-                                        <BarChart data={courseBreakdownData} layout="vertical" margin={{ top: 4, right: 28, left: 8, bottom: 4 }}>
+                                        <BarChart data={courseBreakdownData} key={detail?.userID} layout="vertical" margin={{ top: 4, right: 28, left: 8, bottom: 4 }}>
+                                            <ScoreGradientDefs />
                                             <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" horizontal={false} />
                                             <XAxis type="number" domain={[0, 100]} tick={{ fontSize: 11, fill: INK_SOFT }} />
                                             <YAxis type="category" dataKey="name" width={100} tick={{ fontSize: 11, fill: INK_SOFT }} />
-                                            <Tooltip content={<CustomTooltip />} labelFormatter={(_, p) => p?.[0]?.payload?.fullName} />
+                                            <Tooltip content={<CustomTooltip />} labelFormatter={(_, p) => p?.[0]?.payload?.fullName} cursor={{ fill: "var(--brand-bg)" }} />
                                             <Bar dataKey="score" name="Average Score" radius={[0, 6, 6, 0]}
+                                                isAnimationActive={!reducedMotion}
                                                 animationBegin={150}
                                                 animationDuration={1400}
                                                 animationEasing="ease-out"
                                             >
                                                 {courseBreakdownData.map((entry, i) => (
-                                                    <Cell key={i} fill={scoreColor(entry.score)} />
+                                                    <Cell key={i} fill={scoreFill(entry.score)} />
                                                 ))}
                                                 <LabelList dataKey="score" position="right" formatter={(v) => `${v}%`} style={{ fontSize: 11, fill: "var(--ink)" }} />
                                             </Bar>
@@ -822,18 +869,20 @@ function Statistics() {
                                 <h4 style={{ marginBottom: 10 }}>By Question Type</h4>
                                 <div style={{ width: "100%", height: 120 }}>
                                     <ResponsiveContainer width="100%" height="100%">
-                                        <BarChart data={skillTypeData} layout="vertical" margin={{ top: 4, right: 28, left: 8, bottom: 4 }}>
+                                        <BarChart data={skillTypeData} key={detail?.userID} layout="vertical" margin={{ top: 4, right: 28, left: 8, bottom: 4 }}>
+                                            <ScoreGradientDefs />
                                             <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" horizontal={false} />
                                             <XAxis type="number" domain={[0, 100]} tick={{ fontSize: 11, fill: INK_SOFT }} />
                                             <YAxis type="category" dataKey="name" width={100} tick={{ fontSize: 11, fill: INK_SOFT }} />
-                                            <Tooltip content={<CustomTooltip />} />
+                                            <Tooltip content={<CustomTooltip />} cursor={{ fill: "var(--brand-bg)" }} />
                                             <Bar dataKey="score" name="Score" radius={[0, 6, 6, 0]}
+                                                isAnimationActive={!reducedMotion}
                                                 animationBegin={150}
                                                 animationDuration={1400}
                                                 animationEasing="ease-out"
                                             >
                                                 {skillTypeData.map((entry, i) => (
-                                                    <Cell key={i} fill={scoreColor(entry.score)} />
+                                                    <Cell key={i} fill={scoreFill(entry.score)} />
                                                 ))}
                                                 <LabelList dataKey="score" position="right" formatter={(v) => `${v}%`} style={{ fontSize: 11, fill: "var(--ink)" }} />
                                             </Bar>
