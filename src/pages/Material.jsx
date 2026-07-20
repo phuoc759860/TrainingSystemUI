@@ -12,7 +12,7 @@ import SidePanel from "../components/SidePanel";
 
 // Files are served from the API host itself (see Program.cs UseStaticFiles),
 // not under /api, so this can't reuse the axios baseURL directly.
-const FILE_HOST = "http://localhost:5149";
+const FILE_HOST = (import.meta.env.VITE_API_URL || "http://localhost:5149/api").replace(/\/api\/?$/, "");
 
 const blankForm = () => ({
     title: "",

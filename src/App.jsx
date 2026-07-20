@@ -37,7 +37,7 @@ function App() {
 
     return (
 
-        <BrowserRouter>
+        <BrowserRouter basename="/Education_System">
 
             <Routes>
                 <Route path="/" element={<Landing />} />
