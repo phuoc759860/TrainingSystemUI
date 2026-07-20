@@ -1,111 +1,141 @@
 import { Link } from "react-router-dom";
 import PageIllustration from "./PageIllustration";
 
+const activity = [
+  {
+    kind: "graded",
+    title: "Sarah Chen",
+    detail: "Quiz 3 · React Basics",
+    badge: "92%",
+    badgeTone: "success"
+  },
+  {
+    kind: "progress",
+    title: "Marcus Diallo",
+    detail: "Module 4 · Video Lesson",
+    progress: 68
+  },
+  {
+    kind: "enrolled",
+    title: "Aisha Patel",
+    detail: "UX Fundamentals",
+    badge: "Enrolled",
+    badgeTone: "brand"
+  }
+];
+
+function GradebookCard() {
+  return (
+    <div className="relative mx-auto max-w-md rounded-2xl border border-gray-200 bg-white p-5 shadow-xl shadow-gray-900/10">
+      <div className="mb-4 flex items-center justify-between">
+        <div>
+          <p className="text-[11px] font-semibold tracking-wide text-gray-400 uppercase">Advanced Excel</p>
+          <p className="text-sm font-semibold text-gray-900">Module 4 — Live Activity</p>
+        </div>
+        <span className="flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-1 text-[11px] font-semibold text-emerald-600">
+          <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+          Live
+        </span>
+      </div>
+
+      <div className="space-y-3">
+        {activity.map((row, i) => (
+          <div key={i} className="rounded-xl border border-gray-100 bg-gray-50/60 p-3">
+            <div className="mb-1.5 flex items-center justify-between">
+              <div>
+                <p className="text-[13px] font-semibold text-gray-900">{row.title}</p>
+                <p className="text-[12px] text-gray-500">{row.detail}</p>
+              </div>
+              {row.badge && (
+                <span
+                  className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold ${
+                    row.badgeTone === "success"
+                      ? "bg-emerald-100 text-emerald-700"
+                      : "bg-violet-100 text-violet-700"
+                  }`}
+                >
+                  {row.badge}
+                </span>
+              )}
+            </div>
+            {row.progress != null && (
+              <div className="h-1.5 w-full overflow-hidden rounded-full bg-gray-200">
+                <div
+                  className="h-full rounded-full bg-linear-to-r from-violet-500 to-violet-400"
+                  style={{ width: `${row.progress}%` }}
+                />
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+
+      <p className="mt-4 text-center text-[11px] text-gray-400">
+        Multiple-choice exams auto-graded on submit
+      </p>
+    </div>
+  );
+}
+
 export default function HeroHome() {
   return (
     <section className="relative">
       <PageIllustration />
       <div className="mx-auto max-w-6xl px-4 sm:px-6">
-        <div className="pb-12 pt-32 md:pb-20 md:pt-40">
-          <div className="pb-12 text-center md:pb-16">
-            <div
-              className="mb-6 border-y [border-image:linear-gradient(to_right,transparent,--theme(--color-slate-300/.8),transparent)1]"
-              data-aos="zoom-y-out"
+        <div className="grid items-center gap-12 pt-32 pb-20 md:pb-28 md:pt-40 lg:grid-cols-2 lg:gap-16">
+          {/* Copy */}
+          <div className="text-center lg:text-left">
+            <p
+              className="mb-4 text-sm font-semibold tracking-wide text-violet-600 uppercase"
+              data-aos="fade-up"
             >
-              <div className="-mx-0.5 flex justify-center -space-x-3">
-                {[1, 2, 3, 4, 5, 6].map((i) => (
-                  <img
-                    key={i}
-                    className="box-content rounded-full border-2 border-gray-50"
-                    src={`/images/avatar-0${i}.jpg`}
-                    width={32}
-                    height={32}
-                    alt={`Avatar ${i}`}
-                  />
-                ))}
-              </div>
-            </div>
+              Courses · Exams · Grading
+            </p>
             <h1
-              className="mb-6 border-y text-5xl font-bold [border-image:linear-gradient(to_right,transparent,--theme(--color-slate-300/.8),transparent)1] md:text-6xl"
-              data-aos="zoom-y-out"
-              data-aos-delay={150}
+              className="mb-6 text-5xl font-extrabold tracking-tight text-gray-900 md:text-6xl"
+              data-aos="fade-up"
+              data-aos-delay={100}
             >
-              The training platform <br className="max-lg:hidden" />
-              you're looking for
+              Where courses, exams, and grades finally agree.
             </h1>
-            <div className="mx-auto max-w-3xl">
-              <p
-                className="mb-8 text-lg text-gray-700"
-                data-aos="zoom-y-out"
-                data-aos-delay={300}
+            <p
+              className="mx-auto mb-8 max-w-lg text-lg text-gray-600 lg:mx-0"
+              data-aos="fade-up"
+              data-aos-delay={200}
+            >
+              TrainingHub gives trainers one place to build courses, grade
+              multiple-choice exams instantly, and see exactly who needs
+              help — with role-based access for admins, trainers, and
+              students from day one.
+            </p>
+            <div
+              className="flex flex-col items-center gap-3 sm:flex-row lg:justify-start"
+              data-aos="fade-up"
+              data-aos-delay={300}
+            >
+              <Link
+                to="/register"
+                className="landing-btn group w-full bg-linear-to-t from-violet-600 to-violet-500 bg-[length:100%_100%] bg-[bottom] text-white shadow-sm hover:bg-[length:100%_150%] sm:w-auto"
               >
-                TrainingHub is a modern online training system that empowers
-                trainers and students to manage courses, exams, and learning
-                materials — all in one place.
-              </p>
-              <div className="relative before:absolute before:inset-0 before:border-y before:[border-image:linear-gradient(to_right,transparent,--theme(--color-slate-300/.8),transparent)1]">
-                <div
-                  className="mx-auto max-w-xs sm:flex sm:max-w-none sm:justify-center"
-                  data-aos="zoom-y-out"
-                  data-aos-delay={450}
-                >
-                  <Link
-                    className="landing-btn group mb-4 w-full bg-linear-to-t from-violet-600 to-violet-500 bg-[length:100%_100%] bg-[bottom] text-white shadow-sm hover:bg-[length:100%_150%] sm:mb-0 sm:w-auto"
-                    to="/register"
-                  >
-                    <span className="relative inline-flex items-center">
-                      Get Started{" "}
-                      <span className="ml-1 tracking-normal text-violet-300 transition-transform group-hover:translate-x-0.5">
-                        -&gt;
-                      </span>
-                    </span>
-                  </Link>
-                  <Link
-                    className="landing-btn w-full bg-white text-gray-800 shadow-sm hover:bg-gray-50 sm:ml-4 sm:w-auto"
-                    to="#features"
-                  >
-                    Learn More
-                  </Link>
-                </div>
-              </div>
+                <span className="relative inline-flex items-center">
+                  Get Started{" "}
+                  <span className="ml-1 tracking-normal text-violet-300 transition-transform group-hover:translate-x-0.5">
+                    -&gt;
+                  </span>
+                </span>
+              </Link>
+              <Link
+                to="#features"
+                className="landing-btn w-full bg-white text-gray-800 shadow-sm ring-1 ring-gray-200 hover:bg-gray-50 sm:w-auto"
+              >
+                See what's included
+              </Link>
             </div>
           </div>
-          <div
-            className="mx-auto max-w-3xl"
-            data-aos="zoom-y-out"
-            data-aos-delay={600}
-          >
-            <div className="relative aspect-video rounded-2xl bg-gray-900 px-5 py-3 shadow-xl before:pointer-events-none before:absolute before:-inset-5 before:border-y before:[border-image:linear-gradient(to_right,transparent,--theme(--color-slate-300/.8),transparent)1] after:absolute after:-inset-5 after:-z-10 after:border-x after:[border-image:linear-gradient(to_bottom,transparent,--theme(--color-slate-300/.8),transparent)1]">
-              <div className="relative mb-8 flex items-center justify-between before:block before:h-[9px] before:w-[41px] before:bg-[length:16px_9px] before:[background-image:radial-gradient(circle_at_4.5px_4.5px,var(--color-gray-600)_4.5px,transparent_0)] after:w-[41px]">
-                <span className="text-[13px] font-medium text-white">
-                  traininghub.com
-                </span>
-              </div>
-              <div className="font-mono text-gray-500 [&_span]:opacity-0">
-                <span className="animate-[code-1_10s_infinite] text-gray-200">
-                  Loading course catalog...
-                </span>{" "}
-                <span className="animate-[code-2_10s_infinite]">
-                  Found 12 active courses.
-                </span>
-                <br />
-                <span className="animate-[code-3_10s_infinite]">
-                  Enrolling student #247
-                </span>{" "}
-                <span className="animate-[code-4_10s_infinite]">
-                  Enrollment confirmed.
-                </span>
-                <br />
-                <br />
-                <span className="animate-[code-5_10s_infinite] text-gray-200">
-                  Generating exam report...
-                </span>
-                <br />
-                <span className="animate-[code-6_10s_infinite]">
-                  Report ready. 94% pass rate.
-                </span>
-              </div>
-            </div>
+
+          {/* Signature: live gradebook mock */}
+          <div data-aos="fade-up" data-aos-delay={200}>
+            <GradebookCard />
           </div>
         </div>
       </div>

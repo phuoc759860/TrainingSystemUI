@@ -18,13 +18,9 @@ export default function LargeTestimonial() {
                   fill="#D1D5DB"
                 />
               </svg>
-              <img
-                className="rounded-full"
-                src="/images/avatar-01.jpg"
-                width={48}
-                height={48}
-                alt="Testimonial avatar"
-              />
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-linear-to-br from-violet-600 to-violet-400 text-base font-semibold text-white">
+                JC
+              </div>
             </div>
             <p className="text-2xl font-bold text-gray-900">
               &ldquo;TrainingHub has transformed how I deliver courses. From
