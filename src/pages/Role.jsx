@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import {
     getRoles,
     createRole,
@@ -19,6 +19,7 @@ function Role() {
     const [panelOpen, setPanelOpen] = useState(false);
     const [confirmState, setConfirmState] = useState(null);
     const [toast, setToast] = useState(null);
+    const [search, setSearch] = useState("");
 
     useEffect(() => {
         loadRoles();
@@ -105,28 +106,52 @@ function Role() {
         });
     };
 
+    const filteredRoles = useMemo(() => {
+        const q = search.trim().toLowerCase();
+        if (!q) return roles;
+        return roles.filter(r => r.roleName?.toLowerCase().includes(q));
+    }, [roles, search]);
+
     return (
 
         <div className="page">
 
+            <div className="welcome-banner">
+                <h2>Role Management</h2>
+                <p>Define user roles and access permissions</p>
+            </div>
+
             <div className="page-header">
                 <div>
-                    <h2 style={{ marginTop: 12 }}>Role Management</h2>
+                    <h2 style={{ marginTop: 0 }}>Roles</h2>
                 </div>
 
-                <button className="btn btn-primary" onClick={openCreatePanel}>
-                    + New Role
-                </button>
+                <div style={{ display: "flex", gap: 10 }}>
+                    <input
+                        type="text"
+                        className="search-input"
+                        placeholder="Search roles..."
+                        value={search}
+                        onChange={(e) => setSearch(e.target.value)}
+                    />
+                    <button className="btn btn-primary" onClick={openCreatePanel}>
+                        + New Role
+                    </button>
+                </div>
             </div>
 
             {loading ? (
                 <div className="loading-row">
                     <span className="spinner" /> Loading roles...
                 </div>
-            ) : roles.length === 0 ? (
+            ) : filteredRoles.length === 0 ? (
                 <div className="card empty-state">
                     <div className="empty-icon">🏷️</div>
-                    <p>No roles yet. Create one to get started.</p>
+                    <p>
+                        {search
+                            ? "No roles match your search."
+                            : "No roles yet. Create one to get started."}
+                    </p>
                 </div>
             ) : (
                 <table className="table-modern fade-in">
@@ -140,7 +165,7 @@ function Role() {
 
                     <tbody>
                         {
-                            roles.map(role => (
+                            filteredRoles.map(role => (
                                 <tr key={role.roleID}>
                                     <td style={{ fontWeight: 500 }}>{role.roleName}</td>
                                     <td style={{ textAlign: "right" }}>

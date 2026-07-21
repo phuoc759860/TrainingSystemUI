@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import {
     getUsers,
     createUser,
@@ -27,6 +27,7 @@ function User() {
     const [panelOpen, setPanelOpen] = useState(false);
     const [confirmState, setConfirmState] = useState(null);
     const [toast, setToast] = useState(null);
+    const [search, setSearch] = useState("");
 
     const [form, setForm] = useState(blankForm());
 
@@ -140,28 +141,56 @@ function User() {
         });
     };
 
+    const filteredUsers = useMemo(() => {
+        const q = search.trim().toLowerCase();
+        if (!q) return users;
+        return users.filter(u =>
+            u.name?.toLowerCase().includes(q) ||
+            u.email?.toLowerCase().includes(q) ||
+            u.roleName?.toLowerCase().includes(q)
+        );
+    }, [users, search]);
+
     return (
 
         <div className="page">
 
+            <div className="welcome-banner">
+                <h2>User Management</h2>
+                <p>Manage user accounts and permissions</p>
+            </div>
+
             <div className="page-header">
                 <div>
-                    <h2 style={{ marginTop: 12 }}>User Management</h2>
+                    <h2 style={{ marginTop: 0 }}>Users</h2>
                 </div>
 
-                <button className="btn btn-primary" onClick={openCreatePanel}>
-                    + New User
-                </button>
+                <div style={{ display: "flex", gap: 10 }}>
+                    <input
+                        type="text"
+                        className="search-input"
+                        placeholder="Search users..."
+                        value={search}
+                        onChange={(e) => setSearch(e.target.value)}
+                    />
+                    <button className="btn btn-primary" onClick={openCreatePanel}>
+                        + New User
+                    </button>
+                </div>
             </div>
 
             {loading ? (
                 <div className="loading-row">
                     <span className="spinner" /> Loading users...
                 </div>
-            ) : users.length === 0 ? (
+            ) : filteredUsers.length === 0 ? (
                 <div className="card empty-state">
                     <div className="empty-icon">👤</div>
-                    <p>No users yet. Create one to get started.</p>
+                    <p>
+                        {search
+                            ? "No users match your search."
+                            : "No users yet. Create one to get started."}
+                    </p>
                 </div>
             ) : (
                 <table className="table-modern fade-in">
@@ -177,7 +206,7 @@ function User() {
 
                     <tbody>
                         {
-                            users.map(user => (
+                            filteredUsers.map(user => (
                                 <tr key={user.userID}>
                                     <td style={{ fontWeight: 500 }}>{user.name}</td>
                                     <td>{user.email}</td>

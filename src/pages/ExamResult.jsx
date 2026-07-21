@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { getExamResults, createExamResult, updateExamResult, deleteExamResult } from "../services/ExamResultService";
 import { getUsers } from "../services/UserService";
@@ -21,6 +21,8 @@ function ExamResult() {
     const [confirmState, setConfirmState] = useState(null);
     const [toast, setToast] = useState(null);
     const [form, setForm] = useState(blankForm());
+    const [search, setSearch] = useState("");
+    const [gradingFilter, setGradingFilter] = useState("all");
 
     useEffect(() => { loadResults(); loadUsers(); loadExams(); }, []);
 
@@ -107,34 +109,74 @@ function ExamResult() {
         });
     };
 
+    const filteredResults = useMemo(() => {
+        let list = results;
+        if (gradingFilter === "needsGrading") list = list.filter(r => r.needsGrading);
+        else if (gradingFilter === "graded") list = list.filter(r => !r.needsGrading);
+        const q = search.trim().toLowerCase();
+        if (!q) return list;
+        return list.filter(r =>
+            r.userName?.toLowerCase().includes(q) ||
+            r.examTitle?.toLowerCase().includes(q)
+        );
+    }, [results, search, gradingFilter]);
+
     return (
         <div className="page">
+
+            <div className="welcome-banner">
+                <h2>Exam Results</h2>
+                <p>View and manage exam submissions and grades</p>
+            </div>
+
             <div className="page-header">
                 <div>
-                    <h2 style={{ marginTop: 12 }}>Exam Result Management</h2>
+                    <h2 style={{ marginTop: 0 }}>Results</h2>
                 </div>
 
-                <button className="btn btn-primary" onClick={openCreatePanel}>
-                    + New Result
-                </button>
+                <div style={{ display: "flex", gap: 10 }}>
+                    <select
+                        className="search-input"
+                        value={gradingFilter}
+                        onChange={(e) => setGradingFilter(e.target.value)}
+                    >
+                        <option value="all">All Results</option>
+                        <option value="needsGrading">Needs Grading</option>
+                        <option value="graded">Graded</option>
+                    </select>
+                    <input
+                        type="text"
+                        className="search-input"
+                        placeholder="Search by user or exam..."
+                        value={search}
+                        onChange={(e) => setSearch(e.target.value)}
+                    />
+                    <button className="btn btn-primary" onClick={openCreatePanel}>
+                        + New Result
+                    </button>
+                </div>
             </div>
 
             {loading ? (
                 <div className="loading-row">
                     <span className="spinner" /> Loading results...
                 </div>
-            ) : results.length === 0 ? (
+            ) : filteredResults.length === 0 ? (
                 <div className="card empty-state">
                     <div className="empty-icon">📊</div>
-                    <p>No exam results yet.</p>
+                    <p>
+                        {search || gradingFilter !== "all"
+                            ? "No results match your filters."
+                            : "No exam results yet."}
+                    </p>
                 </div>
             ) : (
                 <table className="table-modern fade-in">
-                    <thead><tr><th>ID</th><th>User</th><th>Exam</th><th>Score</th><th>Status</th><th>Grading</th><th>Submitted</th><th></th></tr></thead>
+                    <thead><tr><th>User</th><th>Exam</th><th>Score</th><th>Status</th><th>Grading</th><th>Submitted</th><th></th></tr></thead>
                     <tbody>
-                        {results.map(r => (
+                        {filteredResults.map(r => (
                             <tr key={r.resultID}>
-                                <td>{r.resultID}</td><td>{r.userName}</td><td>{r.examTitle}</td><td>{r.score}</td>
+                                <td style={{ fontWeight: 500 }}>{r.userName}</td><td>{r.examTitle}</td><td>{r.score}</td>
                                 <td><span className={`badge ${r.passed ? "badge-success" : "badge-danger"}`}>{r.passed ? "Passed" : "Failed"}</span></td>
                                 <td>
                                     {r.needsGrading

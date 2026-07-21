@@ -151,9 +151,14 @@ function Material() {
     return (
         <div className="page">
 
+            <div className="welcome-banner">
+                <h2>Material Management</h2>
+                <p>Upload and manage course materials</p>
+            </div>
+
             <div className="page-header">
                 <div>
-                    <h2 style={{ marginTop: 12 }}>Material Management</h2>
+                    <h2 style={{ marginTop: 0 }}>Materials</h2>
                 </div>
 
                 {canManage && (

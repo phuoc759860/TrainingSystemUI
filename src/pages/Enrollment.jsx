@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import {
     getEnrollments,
     createEnrollment,
@@ -30,6 +30,7 @@ function Enrollment() {
     const [panelOpen, setPanelOpen] = useState(false);
     const [confirmState, setConfirmState] = useState(null);
     const [toast, setToast] = useState(null);
+    const [search, setSearch] = useState("");
 
     const [form, setForm] = useState(blankForm());
 
@@ -151,28 +152,56 @@ function Enrollment() {
         status === "Dropped" ? "badge badge-danger" :
         "badge";
 
+    const filteredEnrollments = useMemo(() => {
+        const q = search.trim().toLowerCase();
+        if (!q) return enrollments;
+        return enrollments.filter(e =>
+            e.userName?.toLowerCase().includes(q) ||
+            e.courseTitle?.toLowerCase().includes(q) ||
+            e.status?.toLowerCase().includes(q)
+        );
+    }, [enrollments, search]);
+
     return (
 
         <div className="page">
 
+            <div className="welcome-banner">
+                <h2>Enrollment Management</h2>
+                <p>Track student enrollments and progress</p>
+            </div>
+
             <div className="page-header">
                 <div>
-                    <h2 style={{ marginTop: 12 }}>Enrollment Management</h2>
+                    <h2 style={{ marginTop: 0 }}>Enrollments</h2>
                 </div>
 
-                <button className="btn btn-primary" onClick={openCreatePanel}>
-                    + New Enrollment
-                </button>
+                <div style={{ display: "flex", gap: 10 }}>
+                    <input
+                        type="text"
+                        className="search-input"
+                        placeholder="Search enrollments..."
+                        value={search}
+                        onChange={(e) => setSearch(e.target.value)}
+                    />
+                    <button className="btn btn-primary" onClick={openCreatePanel}>
+                        + New Enrollment
+                    </button>
+                </div>
             </div>
 
             {loading ? (
                 <div className="loading-row">
                     <span className="spinner" /> Loading enrollments...
                 </div>
-            ) : enrollments.length === 0 ? (
+            ) : filteredEnrollments.length === 0 ? (
                 <div className="card empty-state">
                     <div className="empty-icon">🎓</div>
-                    <p>No enrollments yet. Create one to get started.</p>
+                    <p>
+                        {search
+                            ? "No enrollments match your search."
+                            : "No enrollments yet. Create one to get started."}
+                    </p>
                 </div>
             ) : (
                 <table className="table-modern fade-in">
@@ -189,7 +218,7 @@ function Enrollment() {
 
                     <tbody>
                         {
-                            enrollments.map(enrollment => (
+                            filteredEnrollments.map(enrollment => (
                                 <tr key={enrollment.enrollmentID}>
                                     <td style={{ fontWeight: 500 }}>{enrollment.userName}</td>
                                     <td>{enrollment.courseTitle}</td>

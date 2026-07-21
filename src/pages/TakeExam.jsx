@@ -78,7 +78,9 @@ function TakeExam() {
     if (loading) {
         return (
             <div className="page">
-                <p>Loading exam...</p>
+                <div className="loading-row">
+                    <span className="spinner" /> Loading exam...
+                </div>
             </div>
         );
     }
@@ -86,7 +88,14 @@ function TakeExam() {
     if (error) {
         return (
             <div className="page">
-                <p style={{ color: "var(--danger)" }}>{error}</p>
+                <div className="welcome-banner">
+                    <h2>Exam Unavailable</h2>
+                    <p>{error}</p>
+                </div>
+                <div className="card empty-state">
+                    <div className="empty-icon">⚠️</div>
+                    <p style={{ color: "var(--danger)" }}>{error}</p>
+                </div>
             </div>
         );
     }
@@ -94,59 +103,61 @@ function TakeExam() {
     if (result) {
         return (
             <div className="page">
-                <div className="card" style={{ marginTop: 16, marginBottom: 24, textAlign: "center" }}>
-                    <h2 style={{ marginTop: 0 }}>{exam?.title} — Results</h2>
+                <div className="welcome-banner">
+                    <h2>Exam Complete! 🎉</h2>
+                    <p>Here are your results for {exam?.title}</p>
+                </div>
 
-                    <div className="stat-grid" style={{ marginTop: 20 }}>
-                        <div className="stat-card">
-                            <div className="num">{result.score}%</div>
-                            <div className="label">Score</div>
-                        </div>
-                        <div className="stat-card">
-                            <div className="num">{result.correctCount}/{result.totalQuestions}</div>
-                            <div className="label">Correct</div>
-                        </div>
-                        <div className="stat-card">
-                            <span
-                                className={`badge ${result.passed ? "badge-success" : "badge-danger"}`}
-                                style={{ fontSize: 16 }}
-                            >
-                                {result.passed ? "Passed" : "Failed"}
-                            </span>
-                        </div>
+                <div className="stat-grid" style={{ marginBottom: 24 }}>
+                    <div className="stat-card stat-card-purple">
+                        <div className="num" style={{ color: "#fff" }}>{result.score}%</div>
+                        <div className="label" style={{ color: "rgba(255,255,255,.9)" }}>Score</div>
+                    </div>
+                    <div className="stat-card stat-card-blue">
+                        <div className="num" style={{ color: "#fff" }}>{result.correctCount}/{result.totalQuestions}</div>
+                        <div className="label" style={{ color: "rgba(255,255,255,.9)" }}>Correct</div>
+                    </div>
+                    <div className={`stat-card ${result.passed ? "stat-card-green" : "stat-card-coral"}`}>
+                        <span
+                            className="badge"
+                            style={{ fontSize: 16, background: "rgba(255,255,255,.2)", color: "#fff" }}
+                        >
+                            {result.passed ? "✓ Passed" : "✗ Failed"}
+                        </span>
+                        <div className="label" style={{ color: "rgba(255,255,255,.9)" }}>Status</div>
                     </div>
                 </div>
 
                 <div className="card">
-                    <h3 style={{ marginTop: 0 }}>Question Breakdown</h3>
+                    <h3 style={{ marginTop: 0, marginBottom: 16, fontSize: 18, fontWeight: 700 }}>Question Breakdown</h3>
 
                     {result.questions.map((q, i) => (
                         <div
                             key={q.questionID}
                             style={{
-                                padding: "14px 0",
+                                padding: "16px 0",
                                 borderBottom: i < result.questions.length - 1 ? "1px solid var(--border)" : "none"
                             }}
                         >
-                            <p style={{ fontWeight: 600, marginBottom: 6 }}>
+                            <p style={{ fontWeight: 600, marginBottom: 8, fontSize: 15 }}>
                                 {i + 1}. {q.content}
                             </p>
 
-                            <p style={{ margin: "4px 0" }}>
-                                Your answer: <strong>{q.selectedAnswer || "(no answer)"}</strong>
+                            <p style={{ margin: "4px 0", fontSize: 14, color: "var(--ink-soft)" }}>
+                                Your answer: <strong style={{ color: "var(--ink)" }}>{q.selectedAnswer || "(no answer)"}</strong>
                             </p>
 
                             {q.isCorrect !== null ? (
                                 <>
-                                    <p style={{ margin: "4px 0" }}>
-                                        Correct answer: <strong>{q.correctAnswer}</strong>
+                                    <p style={{ margin: "4px 0", fontSize: 14, color: "var(--ink-soft)" }}>
+                                        Correct answer: <strong style={{ color: "var(--ink)" }}>{q.correctAnswer}</strong>
                                     </p>
                                     <span className={`badge ${q.isCorrect ? "badge-success" : "badge-danger"}`}>
                                         {q.isCorrect ? `+${q.pointsEarned} pts` : "Incorrect"}
                                     </span>
                                 </>
                             ) : (
-                                <span className="badge">Pending review</span>
+                                <span className="badge" style={{ background: "var(--warning-bg)", color: "var(--warning)" }}>Pending review</span>
                             )}
                         </div>
                     ))}
@@ -158,10 +169,14 @@ function TakeExam() {
     return (
         <div className="page">
 
+            <div className="welcome-banner">
+                <h2>{exam?.title} 📝</h2>
+                <p>{exam?.courseTitle} — Answer all questions and submit when ready</p>
+            </div>
+
             <div className="page-header">
                 <div>
-                    <h2 style={{ marginTop: 12 }}>{exam?.title}</h2>
-                    <p style={{ color: "var(--ink-soft)", margin: "4px 0 0" }}>{exam?.courseTitle}</p>
+                    <h2 style={{ marginTop: 0 }}>Questions</h2>
                 </div>
             </div>
 

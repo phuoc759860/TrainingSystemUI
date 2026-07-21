@@ -152,24 +152,23 @@ function Course() {
     return (
         <div className="page">
 
+            <div className="welcome-banner">
+                <h2>Course Management</h2>
+                <p>Organize and manage your training courses</p>
+            </div>
+
             <div className="page-header">
                 <div>
-                    <h2 style={{ marginTop: 12 }}>Course Management</h2>
+                    <h2 style={{ marginTop: 0 }}>Courses</h2>
                 </div>
 
                 <div style={{ display: "flex", gap: 10 }}>
                     <input
                         type="text"
+                        className="search-input"
                         placeholder="Search course..."
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
-                        style={{
-                            padding: "9px 12px",
-                            border: "1px solid var(--border)",
-                            borderRadius: 8,
-                            fontSize: 14,
-                            minWidth: 200
-                        }}
                     />
                     {canManage && (
                         <button className="btn btn-primary" onClick={openCreatePanel}>

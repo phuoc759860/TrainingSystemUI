@@ -1,10 +1,5 @@
 import { useEffect } from "react";
 
-// Lightweight inline toast used instead of alert().
-// Usage:
-//   const [toast, setToast] = useState(null);
-//   setToast({ message: "Exam updated.", type: "success" }); // or type: "error"
-//   <Toast toast={toast} onDone={() => setToast(null)} />
 function Toast({ toast, onDone }) {
     useEffect(() => {
         if (!toast) return;
@@ -14,8 +9,11 @@ function Toast({ toast, onDone }) {
 
     if (!toast) return null;
 
+    const icon = toast.type === "error" ? "✗" : "✓";
+
     return (
         <div className={`toast toast-${toast.type || "success"}`} role="status">
+            <span style={{ fontWeight: 700, marginRight: 8 }}>{icon}</span>
             {toast.message}
         </div>
     );

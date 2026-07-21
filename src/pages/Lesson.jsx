@@ -145,9 +145,14 @@ function Lesson() {
 
         <div className="page">
 
+            <div className="welcome-banner">
+                <h2>Lesson Management</h2>
+                <p>Manage lessons and course content</p>
+            </div>
+
             <div className="page-header">
                 <div>
-                    <h2 style={{ marginTop: 12 }}>Lesson Management</h2>
+                    <h2 style={{ marginTop: 0 }}>Lessons</h2>
                 </div>
 
                 {canManage && (

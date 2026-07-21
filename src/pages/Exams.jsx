@@ -163,24 +163,23 @@ function Exam() {
     return (
         <div className="page">
 
+            <div className="welcome-banner">
+                <h2>Exam Management</h2>
+                <p>Create and manage exams for your courses</p>
+            </div>
+
             <div className="page-header">
                 <div>
-                    <h2 style={{ marginTop: 12 }}>Exam Management</h2>
+                    <h2 style={{ marginTop: 0 }}>Exams</h2>
                 </div>
 
                 <div style={{ display: "flex", gap: 10 }}>
                     <input
                         type="text"
+                        className="search-input"
                         placeholder="Search exams or courses..."
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
-                        style={{
-                            padding: "9px 12px",
-                            border: "1px solid var(--border)",
-                            borderRadius: 8,
-                            fontSize: 14,
-                            minWidth: 220
-                        }}
                     />
                     {canManage && (
                         <button className="btn btn-primary" onClick={openCreatePanel}>

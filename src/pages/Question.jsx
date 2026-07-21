@@ -47,6 +47,7 @@ function Question() {
 
     // Filter for the table / which exam we're managing
     const [filterExamId, setFilterExamId] = useState(preselectedExamId);
+    const [search, setSearch] = useState("");
 
     // ---- Bulk create mode (triggered by ?examId=X&count=N from Exams.jsx) ----
     const [bulkMode, setBulkMode] = useState(initialCount > 1);
@@ -310,20 +311,44 @@ function Question() {
 
     const selectedExamTitle = exams.find(e => String(e.examID) === String(filterExamId))?.title;
 
+    const filteredQuestions = useMemo(() => {
+        const q = search.trim().toLowerCase();
+        if (!q) return questions;
+        return questions.filter(question =>
+            question.content?.toLowerCase().includes(q) ||
+            question.examTitle?.toLowerCase().includes(q) ||
+            question.questionType?.toLowerCase().includes(q)
+        );
+    }, [questions, search]);
+
     return (
 
         <div className="page">
 
+            <div className="welcome-banner">
+                <h2>Question Bank</h2>
+                <p>Create and manage questions for your exams</p>
+            </div>
+
             <div className="page-header">
                 <div>
-                    <h2 style={{ marginTop: 12 }}>Question Bank Management</h2>
+                    <h2 style={{ marginTop: 0 }}>Questions</h2>
                 </div>
 
-                {!bulkMode && (
-                    <button className="btn btn-primary" onClick={openCreatePanel}>
-                        + New Question
-                    </button>
-                )}
+                <div style={{ display: "flex", gap: 10 }}>
+                    <input
+                        type="text"
+                        className="search-input"
+                        placeholder="Search questions..."
+                        value={search}
+                        onChange={(e) => setSearch(e.target.value)}
+                    />
+                    {!bulkMode && (
+                        <button className="btn btn-primary" onClick={openCreatePanel}>
+                            + New Question
+                        </button>
+                    )}
+                </div>
             </div>
 
             {/* Exam selector — always visible, drives both the table and the panel's default exam */}
@@ -510,13 +535,15 @@ function Question() {
                 <div className="loading-row">
                     <span className="spinner" /> Loading questions...
                 </div>
-            ) : questions.length === 0 ? (
+            ) : filteredQuestions.length === 0 ? (
                 <div className="card empty-state">
                     <div className="empty-icon">❓</div>
                     <p>
-                        {filterExamId
-                            ? "This exam doesn't have any questions yet."
-                            : "No questions yet."}
+                        {search
+                            ? "No questions match your search."
+                            : filterExamId
+                                ? "This exam doesn't have any questions yet."
+                                : "No questions yet."}
                     </p>
                 </div>
             ) : (
@@ -535,7 +562,7 @@ function Question() {
 
                     <tbody>
                         {
-                            questions.map(question => (
+                            filteredQuestions.map(question => (
                                 <tr key={question.questionID}>
                                     <td>{question.examTitle}</td>
                                     <td>{question.content}</td>

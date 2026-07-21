@@ -3,13 +3,15 @@ import {
     getAvailableCourses,
     getClassOverview,
     getStudentDetail,
-    getExamRanking
+    getExamRanking,
+    getTrainers,
+    getTrainerDetail
 } from "../services/StatisticsService";
 import SidePanel from "../components/SidePanel";
 import Toast from "../components/Toast";
 import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
-    ResponsiveContainer, Cell, LabelList, PieChart, Pie
+    ResponsiveContainer, Cell, LabelList, PieChart, Pie, Sector
 } from "recharts";
 
 const SUCCESS = "#17a668";
@@ -61,6 +63,11 @@ function scoreColor(value) {
     if (value >= 50) return BRAND;
     return DANGER;
 }
+function scoreCardClass(value) {
+    if (value >= 70) return "stat-card-green";
+    if (value >= 50) return "stat-card-purple";
+    return "stat-card-coral";
+}
 
 function truncate(str, max = 22) {
     if (!str) return "";
@@ -98,6 +105,12 @@ function SortableTh({ label, sortKey, currentSort, onSort }) {
     );
 }
 
+function scoreFillClass(value) {
+    if (value >= 70) return "fill-success";
+    if (value >= 50) return "fill-brand";
+    return "fill-danger";
+}
+
 function MiniBar({ value, max = 100, delay = 0 }) {
     const [width, setWidth] = useState(0);
     useEffect(() => {
@@ -108,8 +121,8 @@ function MiniBar({ value, max = 100, delay = 0 }) {
     return (
         <span className="mini-bar">
             <span
-                className="mini-bar-fill"
-                style={{ width: `${width}%`, background: scoreColor(value) }}
+                className={`mini-bar-fill ${scoreFillClass(value)}`}
+                style={{ width: `${width}%` }}
             />
         </span>
     );
@@ -194,19 +207,13 @@ function ChartSkeleton({ rows = 5, height }) {
 function CustomTooltip({ active, payload, label, unit = "%" }) {
     if (!active || !payload || !payload.length) return null;
     return (
-        <div style={{
-            background: "var(--surface)",
-            border: "1px solid var(--border)",
-            borderRadius: 10,
-            padding: "9px 13px",
-            boxShadow: "var(--shadow)",
-            fontSize: 13,
-            maxWidth: 260
-        }}>
-            <div style={{ fontWeight: 700, marginBottom: 4 }}>{label}</div>
+        <div className="chart-tooltip">
+            {label && <div className="chart-tooltip-label">{label}</div>}
             {payload.map((p, i) => (
-                <div key={i} style={{ color: p.color || p.payload?.fill || "var(--ink)" }}>
-                    {p.name}: {p.value}{unit}
+                <div key={i} className="chart-tooltip-row">
+                    <span className="chart-tooltip-dot" style={{ background: p.color || p.payload?.fill || "var(--brand)" }} />
+                    <span>{p.name}</span>
+                    <span className="chart-tooltip-value">{p.value}{unit}</span>
                 </div>
             ))}
         </div>
@@ -237,14 +244,15 @@ function CourseSelect({ courses, value, onChange, placeholder = "Select a course
 }
 
 function KpiRow({ items }) {
+    const defaults = ["stat-card-purple", "stat-card-blue", "stat-card-green", "stat-card-yellow"];
     return (
         <div className="stat-grid">
             {items.map((item, i) => (
-                <div className="stat-card" key={i}>
-                    <div className="num" style={item.color ? { color: item.color } : undefined}>
+                <div className={`stat-card ${item.cardClass || defaults[i % defaults.length]}`} key={i}>
+                    <div className="num" style={item.color ? { color: "#fff" } : undefined}>
                         {typeof item.value === "number" ? <AnimatedNumber value={item.value} /> : item.value}
                     </div>
-                    <div className="label">{item.label}</div>
+                    <div className="label" style={{ color: "rgba(255,255,255,.9)" }}>{item.label}</div>
                 </div>
             ))}
         </div>
@@ -257,15 +265,339 @@ function StatusBadge({ examsTaken, needsAttention }) {
     return <span className="badge badge-success">On Track</span>;
 }
 
+function renderActivePieShape(props) {
+    const { cx, cy, innerRadius, outerRadius, startAngle, endAngle, fill, payload, value } = props;
+    return (
+        <g>
+            <Sector
+                cx={cx} cy={cy}
+                innerRadius={innerRadius - 2}
+                outerRadius={outerRadius + 8}
+                startAngle={startAngle}
+                endAngle={endAngle}
+                fill={fill}
+                style={{ filter: "drop-shadow(0 3px 8px rgba(0,0,0,.2))", transition: "all .2s ease" }}
+            />
+            <Sector
+                cx={cx} cy={cy}
+                innerRadius={outerRadius + 12}
+                outerRadius={outerRadius + 15}
+                startAngle={startAngle}
+                endAngle={endAngle}
+                fill={fill}
+                opacity={0.5}
+            />
+        </g>
+    );
+}
+
 const TABS = [
     { key: "class", label: "Class" },
     { key: "students", label: "Students" },
     { key: "exams", label: "Exam Ranking" }
 ];
 
+const ADMIN_TABS = [
+    ...TABS,
+    { key: "trainers", label: "Trainers" }
+];
+
+function generateAiReport(detail, type = "student") {
+    if (type === "trainer") return generateTrainerAiReport(detail);
+
+    if (!detail || detail.examsTaken === 0) {
+        return {
+            summary: `${detail?.name || "This student"} has not taken any exams yet. No performance data is available for analysis.`,
+            level: "neutral",
+            sections: [
+                { title: "Engagement", icon: "📋", text: "No exam submissions recorded. Consider reaching out to encourage participation in upcoming assessments." },
+                { title: "Recommendation", icon: "💡", text: "Schedule a one-on-one meeting to understand any barriers to participation and provide support." }
+            ]
+        };
+    }
+
+    const avg = detail.averageScore;
+    const pass = detail.passRate;
+    const mcAcc = detail.multipleChoiceAccuracy;
+    const essayAvg = detail.essayAverageScore;
+    const courses = detail.courseBreakdown || [];
+    const strongCourses = courses.filter(c => c.averageScore >= 70);
+    const midCourses = courses.filter(c => c.averageScore >= 50 && c.averageScore < 70);
+    const weakCourses = courses.filter(c => c.averageScore < 50);
+    const strongExams = detail.strongestExams || [];
+    const weakExams = detail.weakestExams || [];
+
+    let level, levelLabel;
+    if (avg >= 80) { level = "excellent"; levelLabel = "Excellent Performance"; }
+    else if (avg >= 65) { level = "good"; levelLabel = "Good Performance"; }
+    else if (avg >= 50) { level = "average"; levelLabel = "Average Performance"; }
+    else { level = "needs-attention"; levelLabel = "Needs Attention"; }
+
+    const sections = [];
+
+    // Performance Summary
+    let summaryParts = [];
+    summaryParts.push(`${detail.name} has taken ${detail.examsTaken} exam(s) across ${courses.length} course(s) with an overall average of ${avg}% and a pass rate of ${pass}%.`);
+    if (level === "excellent") summaryParts.push("This student is performing at an excellent level and consistently meeting or exceeding expectations.");
+    else if (level === "good") summaryParts.push("This student is performing well with room for growth.");
+    else if (level === "average") summaryParts.push("This student is performing at an average level and would benefit from targeted support.");
+    else summaryParts.push("This student is struggling and requires immediate attention and intervention.");
+
+    sections.push({
+        title: "Performance Summary",
+        icon: "📊",
+        text: summaryParts.join(" "),
+        metrics: [
+            { label: "Average Score", value: `${avg}%`, color: avg >= 70 ? "var(--success)" : avg >= 50 ? "var(--brand)" : "var(--danger)" },
+            { label: "Pass Rate", value: `${pass}%`, color: pass >= 70 ? "var(--success)" : pass >= 50 ? "var(--brand)" : "var(--danger)" },
+            { label: "Exams Taken", value: detail.examsTaken, color: "var(--ink)" }
+        ]
+    });
+
+    // Course-Level Advantages (detailed)
+    if (courses.length > 0) {
+        let courseText = [];
+
+        if (strongCourses.length > 0) {
+            courseText.push(`Advantages: ${strongCourses.map(c => `${c.courseTitle} (${c.averageScore}%, ${c.examsTaken} exam(s))`).join(", ")}. These courses show strong understanding and mastery of the material.`);
+        }
+
+        if (midCourses.length > 0) {
+            courseText.push(`Moderate: ${midCourses.map(c => `${c.courseTitle} (${c.averageScore}%)`).join(", ")}. Decent performance but room for improvement with targeted practice.`);
+        }
+
+        if (weakCourses.length > 0) {
+            courseText.push(`Weaknesses: ${weakCourses.map(c => `${c.courseTitle} (${c.averageScore}%)`).join(", ")}. These courses need focused attention — consider supplementary review, tutoring, or additional practice materials.`);
+        }
+
+        sections.push({
+            title: "Course-Level Analysis",
+            icon: "📚",
+            text: courseText.join(" "),
+            accent: weakCourses.length > 0 ? "danger" : strongCourses.length > 0 ? "success" : undefined,
+            metrics: courses.length <= 5 ? courses.map(c => ({
+                label: c.courseTitle,
+                value: `${c.averageScore}%`,
+                color: c.averageScore >= 70 ? "var(--success)" : c.averageScore >= 50 ? "var(--brand)" : "var(--danger)"
+            })) : null
+        });
+    }
+
+    // Skill Analysis
+    if (mcAcc != null || essayAvg != null) {
+        let skillText = [];
+        if (mcAcc != null) {
+            if (mcAcc >= 75) skillText.push(`Multiple choice accuracy is strong at ${mcAcc}%, showing solid factual knowledge.`);
+            else if (mcAcc >= 50) skillText.push(`Multiple choice accuracy is moderate at ${mcAcc}%. There is room to strengthen foundational knowledge.`);
+            else skillText.push(`Multiple choice accuracy is low at ${mcAcc}%. This suggests gaps in core concepts that need addressing.`);
+        }
+        if (essayAvg != null) {
+            if (essayAvg >= 70) skillText.push(`Essay performance is strong at ${essayAvg}%, demonstrating good analytical and writing skills.`);
+            else if (essayAvg >= 50) skillText.push(`Essay performance is moderate at ${essayAvg}%. Focus on structured reasoning and deeper analysis.`);
+            else skillText.push(`Essay performance is low at ${essayAvg}%. Emphasize critical thinking and written communication practice.`);
+        }
+
+        sections.push({
+            title: "Skill Analysis",
+            icon: "🎯",
+            text: skillText.join(" "),
+            metrics: mcAcc != null && essayAvg != null ? [
+                { label: "MC Accuracy", value: `${mcAcc}%`, color: mcAcc >= 70 ? "var(--success)" : "var(--danger)" },
+                { label: "Essay Score", value: `${essayAvg}%`, color: essayAvg >= 70 ? "var(--success)" : "var(--danger)" }
+            ] : null
+        });
+    }
+
+    // Strengths
+    if (strongCourses.length > 0 || strongExams.length > 0) {
+        let strengthText = [];
+        if (strongCourses.length > 0) {
+            strengthText.push(`Strongest courses: ${strongCourses.map(c => `${c.courseTitle} (${c.averageScore}%)`).join(", ")}.`);
+        }
+        if (strongExams.length > 0) {
+            strengthText.push(`Top exams: ${strongExams.slice(0, 2).map(e => `${e.examTitle} (${e.score}%)`).join(", ")}.`);
+        }
+        strengthText.push("These areas represent the student's core strengths. Consider assigning advanced challenges or peer mentoring roles to maintain engagement.");
+
+        sections.push({
+            title: "Strengths",
+            icon: "💪",
+            text: strengthText.join(" "),
+            accent: "success"
+        });
+    }
+
+    // Weaknesses
+    if (weakCourses.length > 0 || weakExams.length > 0) {
+        let weakText = [];
+        if (weakCourses.length > 0) {
+            weakText.push(`Needs improvement in: ${weakCourses.map(c => `${c.courseTitle} (${c.averageScore}%)`).join(", ")}.`);
+        }
+        if (weakExams.length > 0) {
+            weakText.push(`Lowest exams: ${weakExams.slice(0, 2).map(e => `${e.examTitle} (${e.score}%)`).join(", ")}.`);
+        }
+
+        sections.push({
+            title: "Areas for Improvement",
+            icon: "⚠️",
+            text: weakText.join(" "),
+            accent: "danger"
+        });
+    }
+
+    // Recommendations
+    let recommendations = [];
+    if (avg < 50) {
+        recommendations.push("Schedule immediate intervention: arrange supplementary tutoring or review sessions.");
+        recommendations.push("Break down complex topics into smaller, manageable study units with frequent check-ins.");
+    } else if (avg < 70) {
+        recommendations.push("Provide targeted practice materials focusing on weak areas identified above.");
+        recommendations.push("Pair with a peer tutor or assign study groups for collaborative learning.");
+    } else {
+        recommendations.push("Assign advanced or enrichment materials to keep the student challenged and engaged.");
+        recommendations.push("Consider leadership or mentoring opportunities to reinforce learning through teaching.");
+    }
+
+    if (mcAcc != null && essayAvg != null && Math.abs(mcAcc - essayAvg) > 20) {
+        if (mcAcc > essayAvg) {
+            recommendations.push("The student excels at factual recall but struggles with analytical writing. Assign more essay practice and provide writing rubrics.");
+        } else {
+            recommendations.push("The student writes well but struggles with factual recall. Focus on review quizzes and spaced repetition techniques.");
+        }
+    }
+
+    if (weakCourses.length > 0) {
+        recommendations.push(`Focus extra attention on ${weakCourses.map(c => c.courseTitle).join(" and ")} — consider review sessions, practice tests, or one-on-one support.`);
+    }
+
+    if (detail.needsAttention) {
+        recommendations.push("This student needs attention — consider reaching out directly to discuss their progress and any obstacles.");
+    }
+
+    sections.push({
+        title: "Recommendations",
+        icon: "💡",
+        items: recommendations
+    });
+
+    return { summary: summaryParts.join(" "), level, levelLabel, sections };
+}
+
+function generateTrainerAiReport(detail) {
+    if (!detail) {
+        return {
+            summary: "No data available for this trainer.",
+            level: "neutral",
+            sections: [{ title: "No Data", icon: "📋", text: "No performance data available yet." }]
+        };
+    }
+
+    const avg = detail.averageScore;
+    const pass = detail.passRate;
+    const courses = detail.courses || [];
+    const coursesWithExams = courses.filter(c => c.examsTaken > 0);
+    const coursesNoExams = courses.filter(c => c.examsTaken === 0);
+    const strongCourses = coursesWithExams.filter(c => c.averageScore >= 70);
+    const weakCourses = coursesWithExams.filter(c => c.averageScore < 50);
+
+    let level, levelLabel;
+    if (coursesWithExams.length === 0) { level = "neutral"; levelLabel = "No Exam Data"; }
+    else if (avg >= 70 && pass >= 75) { level = "excellent"; levelLabel = "Excellent Teaching"; }
+    else if (avg >= 60 && pass >= 60) { level = "good"; levelLabel = "Good Teaching"; }
+    else if (avg >= 50) { level = "average"; levelLabel = "Average Results"; }
+    else { level = "needs-attention"; levelLabel = "Needs Attention"; }
+
+    const sections = [];
+
+    let summaryParts = [];
+    summaryParts.push(`${detail.name} manages ${detail.coursesCount} course(s) with ${detail.totalStudents} total enrolled student(s) and ${detail.totalExams} exam submission(s) across all courses.`);
+    if (coursesWithExams.length > 0) {
+        summaryParts.push(`Student performance across their courses averages ${avg}% with a ${pass}% pass rate.`);
+    }
+    if (coursesNoExams.length > 0) {
+        summaryParts.push(`${coursesNoExams.length} course(s) have no exam submissions yet.`);
+    }
+
+    sections.push({
+        title: "Trainer Overview",
+        icon: "📊",
+        text: summaryParts.join(" "),
+        metrics: [
+            { label: "Courses", value: detail.coursesCount, color: "var(--brand)" },
+            { label: "Students", value: detail.totalStudents, color: "var(--ink)" },
+            { label: "Avg Score", value: `${avg}%`, color: avg >= 60 ? "var(--success)" : "var(--danger)" },
+            { label: "Pass Rate", value: `${pass}%`, color: pass >= 60 ? "var(--success)" : "var(--danger)" }
+        ]
+    });
+
+    if (courses.length > 0) {
+        let courseAnalysis = [];
+
+        if (strongCourses.length > 0) {
+            courseAnalysis.push(`Well-performing courses: ${strongCourses.map(c => `${c.courseTitle} (avg ${c.averageScore}%, ${c.enrolledStudents} students)`).join(", ")}.`);
+        }
+
+        if (weakCourses.length > 0) {
+            courseAnalysis.push(`Courses needing attention: ${weakCourses.map(c => `${c.courseTitle} (avg ${c.averageScore}%)`).join(", ")}. Students are struggling — consider reviewing exam difficulty, content coverage, or providing additional resources.`);
+        }
+
+        if (coursesNoExams.length > 0) {
+            courseAnalysis.push(`Courses without exam data: ${coursesNoExams.map(c => c.courseTitle).join(", ")}.`);
+        }
+
+        if (coursesWithExams.length > 0 && courseAnalysis.length === 0) {
+            courseAnalysis.push("All courses have moderate student performance. Consider diversifying assessment methods or adjusting difficulty levels.");
+        }
+
+        sections.push({
+            title: "Course Analysis",
+            icon: "📚",
+            text: courseAnalysis.join(" "),
+            accent: weakCourses.length > 0 ? "danger" : strongCourses.length > 0 ? "success" : undefined,
+            metrics: courses.length <= 6 ? courses.map(c => ({
+                label: c.courseTitle,
+                value: c.examsTaken > 0 ? `${c.averageScore}%` : "—",
+                color: c.examsTaken === 0 ? "var(--ink-soft)" : c.averageScore >= 70 ? "var(--success)" : c.averageScore >= 50 ? "var(--brand)" : "var(--danger)"
+            })) : null
+        });
+    }
+
+    let recommendations = [];
+
+    if (coursesWithExams.length === 0) {
+        recommendations.push("No exams have been graded yet. Ensure exams are properly set up and students are completing them.");
+    } else {
+        if (avg >= 70 && pass >= 75) {
+            recommendations.push("Strong overall performance. Consider introducing more challenging assessments to maintain academic rigor.");
+        } else if (avg < 50) {
+            recommendations.push("Average student scores are low across courses. Review exam difficulty, content alignment, and consider adding review materials or practice tests.");
+        } else {
+            recommendations.push("Provide additional support materials for underperforming courses identified above.");
+        }
+
+        if (weakCourses.length > 0) {
+            recommendations.push(`Focus on improving outcomes in: ${weakCourses.map(c => c.courseTitle).join(" and ")}. Consider peer reviews, content revisions, or supplementary resources.`);
+        }
+
+        if (detail.totalStudents < 5) {
+            recommendations.push("Total enrollment is low. Consider coordinating with administration to boost enrollment or visibility of your courses.");
+        }
+    }
+
+    sections.push({
+        title: "Recommendations",
+        icon: "💡",
+        items: recommendations
+    });
+
+    return { summary: summaryParts.join(" "), level, levelLabel, sections };
+}
+
 function Statistics() {
 
     const reducedMotion = usePrefersReducedMotion();
+    const role = localStorage.getItem("role");
+    const isAdmin = role === "Admin";
 
     const [activeTab, setActiveTab] = useState("class");
     const [courses, setCourses] = useState([]);
@@ -275,11 +607,15 @@ function Statistics() {
     const [panelOpen, setPanelOpen] = useState(false);
     const [detail, setDetail] = useState(null);
     const [detailLoading, setDetailLoading] = useState(false);
+    const [aiReport, setAiReport] = useState(null);
+    const [aiReportLoading, setAiReportLoading] = useState(false);
 
     const openStudent = async (userId) => {
         setPanelOpen(true);
+        setPanelType("student");
         setDetailLoading(true);
         setDetail(null);
+        setAiReport(null);
         try {
             const res = await getStudentDetail(userId);
             setDetail(res.data);
@@ -296,6 +632,17 @@ function Statistics() {
     const closePanel = () => {
         setPanelOpen(false);
         setDetail(null);
+        setAiReport(null);
+    };
+
+    const generateReport = async () => {
+        if (!detail) return;
+        setAiReportLoading(true);
+        // Simulate AI processing delay for UX
+        await new Promise(r => setTimeout(r, 800));
+        const report = generateAiReport(detail, panelType);
+        setAiReport(report);
+        setAiReportLoading(false);
     };
 
     // ---------- CLASS tab ----------
@@ -317,6 +664,13 @@ function Statistics() {
     const [examRanking, setExamRanking] = useState([]);
     const [examLoading, setExamLoading] = useState(false);
 
+    // ---------- TRAINERS tab ----------
+    const [allTrainers, setAllTrainers] = useState([]);
+    const [trainersLoading, setTrainersLoading] = useState(true);
+    const [trainerSearch, setTrainerSearch] = useState("");
+    const [trainerSort, setTrainerSort] = useState({ key: "averageScore", dir: "desc" });
+    const [panelType, setPanelType] = useState("student");
+
     useEffect(() => {
         loadCourses();
         loadAllStudents();
@@ -331,6 +685,10 @@ function Statistics() {
         if (examCourseId) loadExamRanking();
         else setExamRanking([]);
     }, [examCourseId]);
+
+    useEffect(() => {
+        if (activeTab === "trainers" && isAdmin && allTrainers.length === 0) loadAllTrainers();
+    }, [activeTab]);
 
     const loadCourses = async () => {
         try {
@@ -353,6 +711,39 @@ function Statistics() {
         }
         finally {
             setStudentsLoading(false);
+        }
+    };
+
+    const loadAllTrainers = async () => {
+        setTrainersLoading(true);
+        try {
+            const res = await getTrainers();
+            setAllTrainers(res.data);
+        }
+        catch {
+            setToast({ message: "Couldn't load trainers.", type: "error" });
+        }
+        finally {
+            setTrainersLoading(false);
+        }
+    };
+
+    const openTrainer = async (userId) => {
+        setPanelOpen(true);
+        setPanelType("trainer");
+        setDetailLoading(true);
+        setDetail(null);
+        setAiReport(null);
+        try {
+            const res = await getTrainerDetail(userId);
+            setDetail(res.data);
+        }
+        catch {
+            setToast({ message: "Couldn't load trainer details.", type: "error" });
+            setPanelOpen(false);
+        }
+        finally {
+            setDetailLoading(false);
         }
     };
 
@@ -409,7 +800,7 @@ function Statistics() {
         const attention = classStudents.filter(s => s.needsAttention).length;
         return [
             { label: "Enrolled Students", value: classStudents.length },
-            { label: "Class Average", value: avg != null ? `${avg}%` : "—", color: avg != null ? scoreColor(avg) : undefined },
+            { label: "Class Average", value: avg != null ? `${avg}%` : "—", color: avg != null ? scoreColor(avg) : undefined, cardClass: avg != null ? scoreCardClass(avg) : undefined },
             { label: "Needs Attention", value: attention, color: attention > 0 ? DANGER : SUCCESS }
         ];
     }, [classStudents]);
@@ -442,7 +833,7 @@ function Statistics() {
         const attention = allStudents.filter(s => s.needsAttention).length;
         return [
             { label: "Total Students", value: allStudents.length },
-            { label: "Overall Average", value: avg != null ? `${avg}%` : "—", color: avg != null ? scoreColor(avg) : undefined },
+            { label: "Overall Average", value: avg != null ? `${avg}%` : "—", color: avg != null ? scoreColor(avg) : undefined, cardClass: avg != null ? scoreCardClass(avg) : undefined },
             { label: "Needs Attention", value: attention, color: attention > 0 ? DANGER : SUCCESS }
         ];
     }, [allStudents]);
@@ -466,11 +857,45 @@ function Statistics() {
         ];
     }, [examRanking]);
 
-    const courseBreakdownData = detail?.courseBreakdown.map(c => ({
+    // ---------- TRAINERS derived ----------
+    const filteredTrainers = useMemo(() => {
+        let rows = trainerSearch.trim()
+            ? allTrainers.filter(t => t.name.toLowerCase().includes(trainerSearch.trim().toLowerCase()) || t.email.toLowerCase().includes(trainerSearch.trim().toLowerCase()))
+            : allTrainers;
+        return sortRows(rows, trainerSort.key, trainerSort.dir);
+    }, [allTrainers, trainerSearch, trainerSort]);
+
+    const trainerKpis = useMemo(() => {
+        if (allTrainers.length === 0) return [];
+        const active = allTrainers.filter(t => t.totalExams > 0);
+        const avg = active.length
+            ? Math.round((active.reduce((sum, t) => sum + t.averageScore, 0) / active.length) * 10) / 10
+            : null;
+        const totalStudents = allTrainers.reduce((sum, t) => sum + t.totalStudents, 0);
+        return [
+            { label: "Total Trainers", value: allTrainers.length },
+            { label: "Total Students", value: totalStudents, color: "var(--ink)" },
+            { label: "Avg Student Score", value: avg != null ? `${avg}%` : "—", color: avg != null ? scoreColor(avg) : undefined, cardClass: avg != null ? scoreCardClass(avg) : undefined }
+        ];
+    }, [allTrainers]);
+
+    const courseBreakdownData = detail?.courseBreakdown?.map(c => ({
         name: truncate(c.courseTitle, 16),
         fullName: c.courseTitle,
         score: c.averageScore
     })) ?? [];
+
+    const trainerCourseData = (panelType === "trainer" && detail?.courses)
+        ? [...detail.courses]
+            .sort((a, b) => a.averageScore - b.averageScore)
+            .map(c => ({
+                name: truncate(c.courseTitle, 22),
+                fullName: c.courseTitle,
+                score: c.averageScore,
+                students: c.enrolledStudents,
+                exams: c.examsTaken
+            }))
+        : [];
 
     const skillTypeData = detail
         ? [
@@ -484,18 +909,20 @@ function Statistics() {
     return (
         <div className="page">
 
+            <div className="welcome-banner">
+                <h2>Performance Statistics</h2>
+                <p>Analyze student performance and identify areas for improvement</p>
+            </div>
+
             <div className="page-header">
                 <div>
-                    <h2 style={{ marginTop: 12 }}>Performance Statistics</h2>
-                    <p style={{ color: "var(--ink-soft)", margin: "4px 0 0" }}>
-                        See how your class is doing and where to focus next.
-                    </p>
+                    <h2 style={{ marginTop: 0 }}>Statistics</h2>
                 </div>
             </div>
 
             {/* ---- Segmented tab bar ---- */}
             <div className="tabs-segment">
-                {TABS.map(t => (
+                {(isAdmin ? ADMIN_TABS : TABS).map(t => (
                     <button
                         key={t.key}
                         className={activeTab === t.key ? "active" : ""}
@@ -538,12 +965,12 @@ function Statistics() {
                                             delay={50}
                                         >
                                             <ResponsiveContainer width="100%" height="100%">
-                                                <BarChart data={classChartData} key={classCourseId} layout="vertical" margin={{ top: 4, right: 30, left: 8, bottom: 4 }}>
+                                                <BarChart data={classChartData} key={classCourseId} layout="vertical" barCategoryGap="18%" barSize={20} margin={{ top: 4, right: 30, left: 8, bottom: 4 }}>
                                                     <ScoreGradientDefs />
                                                     <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" horizontal={false} />
                                                     <XAxis type="number" domain={[0, 100]} tick={{ fontSize: 12, fill: INK_SOFT }} />
                                                     <YAxis type="category" dataKey="name" width={110} tick={{ fontSize: 12, fill: INK_SOFT }} />
-                                                    <Tooltip content={<CustomTooltip />} labelFormatter={(_, p) => p?.[0]?.payload?.fullName} cursor={{ fill: "var(--brand-bg)" }} />
+                                                    <Tooltip content={<CustomTooltip />} labelFormatter={(_, p) => p?.[0]?.payload?.fullName} cursor={{ fill: "rgba(108,92,231,.06)" }} />
                                                     <Bar dataKey="score" name="Average Score" radius={[0, 6, 6, 0]}
                                                         isAnimationActive={!reducedMotion}
                                                         animationBegin={150}
@@ -572,6 +999,7 @@ function Statistics() {
                                                         innerRadius="60%"
                                                         outerRadius="85%"
                                                         paddingAngle={3}
+                                                        activeShape={renderActivePieShape}
                                                         isAnimationActive={!reducedMotion}
                                                         animationBegin={350}
                                                         animationDuration={1400}
@@ -628,7 +1056,7 @@ function Statistics() {
                                                 {s.examsTaken > 0 ? (
                                                     <>
                                                         <MiniBar value={s.averageScore} delay={300 + i * 20} />
-                                                        {s.averageScore}%
+                                                        <span style={{ color: scoreColor(s.averageScore), fontWeight: 600 }}>{s.averageScore}%</span>
                                                     </>
                                                 ) : "—"}
                                             </td>
@@ -704,13 +1132,91 @@ function Statistics() {
                                             {s.examsTaken > 0 ? (
                                                 <>
                                                     <MiniBar value={s.averageScore} delay={300 + i * 20} />
-                                                    {s.averageScore}%
+                                                    <span style={{ color: scoreColor(s.averageScore), fontWeight: 600 }}>{s.averageScore}%</span>
                                                 </>
                                             ) : "—"}
                                         </td>
                                         <td>{s.examsTaken > 0 ? `${s.passRate}%` : "—"}</td>
                                         <td>
                                             <StatusBadge examsTaken={s.examsTaken} needsAttention={s.needsAttention} />
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    )}
+                </div>
+            )}
+
+            {/* ================= TRAINERS TAB ================= */}
+            {activeTab === "trainers" && (
+                <div className="tab-content" key="trainers">
+                    <KpiRow items={trainerKpis} />
+
+                    <div style={{ display: "flex", gap: 12, alignItems: "flex-end", marginBottom: 20, flexWrap: "wrap" }}>
+                        <div className="field" style={{ maxWidth: 320, marginBottom: 0 }}>
+                            <label>Search Trainer</label>
+                            <input
+                                placeholder="Search by name or email..."
+                                value={trainerSearch}
+                                onChange={(e) => setTrainerSearch(e.target.value)}
+                            />
+                        </div>
+                    </div>
+
+                    {trainersLoading ? (
+                        <div className="loading-row">
+                            <span className="spinner" /> Loading trainers...
+                        </div>
+                    ) : filteredTrainers.length === 0 ? (
+                        <EmptyPrompt
+                            icon="🔍"
+                            text={trainerSearch ? "No trainers match that search." : "No trainers found."}
+                        />
+                    ) : (
+                        <table className="table-modern fade-in">
+                            <thead>
+                                <tr>
+                                    <SortableTh label="Trainer" sortKey="name" currentSort={trainerSort} onSort={toggleSort(setTrainerSort)} />
+                                    <SortableTh label="Courses" sortKey="coursesCount" currentSort={trainerSort} onSort={toggleSort(setTrainerSort)} />
+                                    <SortableTh label="Students" sortKey="totalStudents" currentSort={trainerSort} onSort={toggleSort(setTrainerSort)} />
+                                    <SortableTh label="Avg Score" sortKey="averageScore" currentSort={trainerSort} onSort={toggleSort(setTrainerSort)} />
+                                    <SortableTh label="Pass Rate" sortKey="passRate" currentSort={trainerSort} onSort={toggleSort(setTrainerSort)} />
+                                    <th>AI Report</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {filteredTrainers.map((t, i) => (
+                                    <tr
+                                        key={t.userID}
+                                        className={t.totalExams > 0 ? "clickable-row" : ""}
+                                        onClick={() => openTrainer(t.userID)}
+                                        style={{ animationDelay: `${i * 20}ms` }}
+                                    >
+                                        <td className="name-cell">
+                                            <span className="avatar-chip">{initials(t.name)}</span>
+                                            <span style={{ fontWeight: 600 }}>{t.name}</span>
+                                        </td>
+                                        <td>{t.coursesCount}</td>
+                                        <td>{t.totalStudents}</td>
+                                        <td>
+                                            {t.totalExams > 0 ? (
+                                                <>
+                                                    <MiniBar value={t.averageScore} delay={300 + i * 20} />
+                                                    <span style={{ color: scoreColor(t.averageScore), fontWeight: 600 }}>{t.averageScore}%</span>
+                                                </>
+                                            ) : "—"}
+                                        </td>
+                                        <td>{t.totalExams > 0 ? `${t.passRate}%` : "—"}</td>
+                                        <td>
+                                            {t.totalExams > 0 && (
+                                                <button
+                                                    className="btn btn-sm btn-primary"
+                                                    onClick={(e) => { e.stopPropagation(); openTrainer(t.userID); }}
+                                                >
+                                                    AI Report
+                                                </button>
+                                            )}
                                         </td>
                                     </tr>
                                 ))}
@@ -749,12 +1255,12 @@ function Statistics() {
                                 delay={50}
                             >
                                 <ResponsiveContainer width="100%" height="100%">
-                                    <BarChart data={examChartData} key={examCourseId} layout="vertical" margin={{ top: 4, right: 30, left: 8, bottom: 4 }}>
+                                    <BarChart data={examChartData} key={examCourseId} layout="vertical" barCategoryGap="18%" barSize={20} margin={{ top: 4, right: 30, left: 8, bottom: 4 }}>
                                         <ScoreGradientDefs />
                                         <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" horizontal={false} />
                                         <XAxis type="number" domain={[0, 100]} tick={{ fontSize: 12, fill: INK_SOFT }} />
                                         <YAxis type="category" dataKey="name" width={170} tick={{ fontSize: 11, fill: INK_SOFT }} />
-                                        <Tooltip content={<CustomTooltip />} labelFormatter={(_, p) => p?.[0]?.payload?.fullName} cursor={{ fill: "var(--brand-bg)" }} />
+                                        <Tooltip content={<CustomTooltip />} labelFormatter={(_, p) => p?.[0]?.payload?.fullName} cursor={{ fill: "rgba(108,92,231,.06)" }} />
                                         <Bar dataKey="score" name="Average Score" radius={[0, 6, 6, 0]}
                                             isAnimationActive={!reducedMotion}
                                             animationBegin={100}
@@ -788,9 +1294,7 @@ function Statistics() {
                                             <td>{e.attemptCount}</td>
                                             <td>
                                                 <MiniBar value={e.averageScore} delay={300 + i * 20} />
-                                                <span className={`badge ${e.averageScore < 50 ? "badge-danger" : "badge-success"}`}>
-                                                    {e.averageScore}%
-                                                </span>
+                                                <span style={{ color: scoreColor(e.averageScore), fontWeight: 600 }}>{e.averageScore}%</span>
                                             </td>
                                             <td>{e.passRate}%</td>
                                         </tr>
@@ -802,118 +1306,264 @@ function Statistics() {
                 </div>
             )}
 
-            {/* ---- Shared student detail panel ---- */}
+            {/* ---- Shared student/trainer detail panel ---- */}
             <SidePanel
                 open={panelOpen}
-                title={detail ? detail.name : "Student Details"}
-                subtitle={detail ? `${detail.examsTaken} exam(s) taken across all enrolled courses` : undefined}
+                title={detail ? detail.name : panelType === "trainer" ? "Trainer Details" : "Student Details"}
+                subtitle={detail
+                    ? panelType === "trainer"
+                        ? `${detail.coursesCount} course(s), ${detail.totalStudents} student(s)`
+                        : `${detail.examsTaken} exam(s) taken across all enrolled courses`
+                    : undefined}
                 onClose={closePanel}
-                footer={<button className="btn btn-outline" onClick={closePanel}>Close</button>}
+                wide={true}
+                footer={
+                    <>
+                        {!aiReport && detail && (
+                            (panelType === "trainer" && detail.totalExams > 0) ||
+                            (panelType === "student" && detail.examsTaken > 0)
+                        ) && (
+                            <button className="btn btn-primary" onClick={generateReport} disabled={aiReportLoading}>
+                                {aiReportLoading ? (
+                                    <><span className="spinner" /> Generating...</>
+                                ) : (
+                                    "AI Report"
+                                )}
+                            </button>
+                        )}
+                        <button className="btn btn-outline" onClick={closePanel}>Close</button>
+                    </>
+                }
             >
                 {detailLoading ? (
                     <ChartSkeleton rows={4} height={160} />
                 ) : detail && (
                     <>
-                        <div className="stat-grid" style={{ marginBottom: 22 }}>
-                            <div className="stat-card">
-                                <div className="num">{detail.averageScore}%</div>
-                                <div className="label">Average Score</div>
-                            </div>
-                            <div className="stat-card">
-                                <div className="num">{detail.passRate}%</div>
-                                <div className="label">Pass Rate</div>
-                            </div>
-                        </div>
-
-                        {(detail.strongestCourse || detail.weakestCourse) && (
-                            <div style={{ display: "flex", gap: 10, marginBottom: 22, flexWrap: "wrap" }}>
-                                {detail.strongestCourse && (
-                                    <span className="badge badge-success">💪 Strongest: {detail.strongestCourse}</span>
-                                )}
-                                {detail.weakestCourse && detail.weakestCourse !== detail.strongestCourse && (
-                                    <span className="badge badge-danger">⚠️ Weakest: {detail.weakestCourse}</span>
-                                )}
-                            </div>
-                        )}
-
-                        {courseBreakdownData.length > 0 && (
-                            <div style={{ marginBottom: 24 }}>
-                                <h4 style={{ marginBottom: 10 }}>Score by Enrolled Course</h4>
-                                <div style={{ width: "100%", height: Math.max(140, courseBreakdownData.length * 42) }}>
-                                    <ResponsiveContainer width="100%" height="100%">
-                                        <BarChart data={courseBreakdownData} key={detail?.userID} layout="vertical" margin={{ top: 4, right: 28, left: 8, bottom: 4 }}>
-                                            <ScoreGradientDefs />
-                                            <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" horizontal={false} />
-                                            <XAxis type="number" domain={[0, 100]} tick={{ fontSize: 11, fill: INK_SOFT }} />
-                                            <YAxis type="category" dataKey="name" width={100} tick={{ fontSize: 11, fill: INK_SOFT }} />
-                                            <Tooltip content={<CustomTooltip />} labelFormatter={(_, p) => p?.[0]?.payload?.fullName} cursor={{ fill: "var(--brand-bg)" }} />
-                                            <Bar dataKey="score" name="Average Score" radius={[0, 6, 6, 0]}
-                                                isAnimationActive={!reducedMotion}
-                                                animationBegin={150}
-                                                animationDuration={1400}
-                                                animationEasing="ease-out"
-                                            >
-                                                {courseBreakdownData.map((entry, i) => (
-                                                    <Cell key={i} fill={scoreFill(entry.score)} />
-                                                ))}
-                                                <LabelList dataKey="score" position="right" formatter={(v) => `${v}%`} style={{ fontSize: 11, fill: "var(--ink)" }} />
-                                            </Bar>
-                                        </BarChart>
-                                    </ResponsiveContainer>
-                                </div>
-                            </div>
-                        )}
-
-                        {skillTypeData.length > 0 && (
-                            <div style={{ marginBottom: 24 }}>
-                                <h4 style={{ marginBottom: 10 }}>By Question Type</h4>
-                                <div style={{ width: "100%", height: 120 }}>
-                                    <ResponsiveContainer width="100%" height="100%">
-                                        <BarChart data={skillTypeData} key={detail?.userID} layout="vertical" margin={{ top: 4, right: 28, left: 8, bottom: 4 }}>
-                                            <ScoreGradientDefs />
-                                            <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" horizontal={false} />
-                                            <XAxis type="number" domain={[0, 100]} tick={{ fontSize: 11, fill: INK_SOFT }} />
-                                            <YAxis type="category" dataKey="name" width={100} tick={{ fontSize: 11, fill: INK_SOFT }} />
-                                            <Tooltip content={<CustomTooltip />} cursor={{ fill: "var(--brand-bg)" }} />
-                                            <Bar dataKey="score" name="Score" radius={[0, 6, 6, 0]}
-                                                isAnimationActive={!reducedMotion}
-                                                animationBegin={150}
-                                                animationDuration={1400}
-                                                animationEasing="ease-out"
-                                            >
-                                                {skillTypeData.map((entry, i) => (
-                                                    <Cell key={i} fill={scoreFill(entry.score)} />
-                                                ))}
-                                                <LabelList dataKey="score" position="right" formatter={(v) => `${v}%`} style={{ fontSize: 11, fill: "var(--ink)" }} />
-                                            </Bar>
-                                        </BarChart>
-                                    </ResponsiveContainer>
-                                </div>
-                            </div>
-                        )}
-
-                        {detail.weakestExams.length > 0 && (
+                        {/* ---- Trainer detail panel ---- */}
+                        {panelType === "trainer" && (
                             <>
-                                <h4 style={{ margin: "22px 0 10px" }}>Lowest-Scoring Exams</h4>
-                                {detail.weakestExams.map(e => (
-                                    <div key={`weak-${e.examID}`} style={{ display: "flex", justifyContent: "space-between", padding: "8px 0", borderBottom: "1px solid var(--border)" }}>
-                                        <span>{e.examTitle}</span>
-                                        <span className="badge badge-danger">{e.score}%</span>
+                                <div className="stat-grid" style={{ marginBottom: 22 }}>
+                                    <div className="stat-card stat-card-purple">
+                                        <div className="num" style={{ color: "#fff" }}>{detail.coursesCount}</div>
+                                        <div className="label" style={{ color: "rgba(255,255,255,.9)" }}>Courses</div>
                                     </div>
-                                ))}
+                                    <div className="stat-card stat-card-blue">
+                                        <div className="num" style={{ color: "#fff" }}>{detail.totalStudents}</div>
+                                        <div className="label" style={{ color: "rgba(255,255,255,.9)" }}>Students</div>
+                                    </div>
+                                    <div className={`stat-card ${scoreCardClass(detail.averageScore)}`}>
+                                        <div className="num" style={{ color: "#fff" }}>{detail.averageScore}%</div>
+                                        <div className="label" style={{ color: "rgba(255,255,255,.9)" }}>Avg Score</div>
+                                    </div>
+                                    <div className="stat-card stat-card-yellow">
+                                        <div className="num" style={{ color: "#fff" }}>{detail.passRate}%</div>
+                                        <div className="label" style={{ color: "rgba(255,255,255,.9)" }}>Pass Rate</div>
+                                    </div>
+                                </div>
+
+                                <div style={{ fontSize: 13, color: "var(--ink-soft)", marginBottom: 16 }}>
+                                    <span style={{ fontWeight: 600 }}>Email:</span> {detail.email}
+                                </div>
+
+                                {detail.courses?.length > 0 && (
+                                    <div style={{ marginBottom: 24 }}>
+                                        <h4 style={{ marginBottom: 10 }}>Average Score by Course</h4>
+                                        <div style={{ width: "100%", height: Math.max(160, trainerCourseData.length * 46) }}>
+                                            <ResponsiveContainer width="100%" height="100%">
+                                                <BarChart data={trainerCourseData} key={detail?.userID} layout="vertical" barCategoryGap="18%" barSize={20} margin={{ top: 4, right: 36, left: 8, bottom: 4 }}>
+                                                    <ScoreGradientDefs />
+                                                    <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" horizontal={false} />
+                                                    <XAxis type="number" domain={[0, 100]} tick={{ fontSize: 11, fill: INK_SOFT }} />
+                                                    <YAxis type="category" dataKey="name" width={140} tick={{ fontSize: 11, fill: INK_SOFT }} />
+                                                    <Tooltip content={<CustomTooltip />} labelFormatter={(_, p) => p?.[0]?.payload?.fullName} cursor={{ fill: "rgba(108,92,231,.06)" }} />
+                                                    <Bar dataKey="score" name="Average Score" radius={[0, 6, 6, 0]}
+                                                        isAnimationActive={!reducedMotion}
+                                                        animationBegin={150}
+                                                        animationDuration={1400}
+                                                        animationEasing="ease-out"
+                                                    >
+                                                        {trainerCourseData.map((entry, i) => (
+                                                            <Cell key={i} fill={scoreFill(entry.score)} />
+                                                        ))}
+                                                        <LabelList dataKey="score" position="right" formatter={(v) => `${v}%`} style={{ fontSize: 11, fill: "var(--ink)" }} />
+                                                    </Bar>
+                                                </BarChart>
+                                            </ResponsiveContainer>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {detail.courses?.length === 0 && (
+                                    <EmptyPrompt icon="📚" text="This trainer has no courses assigned yet." />
+                                )}
                             </>
                         )}
 
-                        {detail.strongestExams.length > 0 && (
+                        {/* ---- Student detail panel ---- */}
+                        {panelType === "student" && (
                             <>
-                                <h4 style={{ margin: "22px 0 10px" }}>Highest-Scoring Exams</h4>
-                                {detail.strongestExams.map(e => (
-                                    <div key={`strong-${e.examID}`} style={{ display: "flex", justifyContent: "space-between", padding: "8px 0", borderBottom: "1px solid var(--border)" }}>
-                                        <span>{e.examTitle}</span>
-                                        <span className="badge badge-success">{e.score}%</span>
+                                <div className="stat-grid" style={{ marginBottom: 22 }}>
+                                    <div className={`stat-card ${scoreCardClass(detail.averageScore)}`}>
+                                        <div className="num" style={{ color: "#fff" }}>{detail.averageScore}%</div>
+                                        <div className="label" style={{ color: "rgba(255,255,255,.9)" }}>Average Score</div>
+                                    </div>
+                                    <div className="stat-card">
+                                        <div className="num">{detail.passRate}%</div>
+                                        <div className="label">Pass Rate</div>
+                                    </div>
+                                </div>
+
+                                {(detail.strongestCourse || detail.weakestCourse) && (
+                                    <div style={{ display: "flex", gap: 10, marginBottom: 22, flexWrap: "wrap" }}>
+                                        {detail.strongestCourse && (
+                                            <span className="badge badge-success">💪 Strongest: {detail.strongestCourse}</span>
+                                        )}
+                                        {detail.weakestCourse && detail.weakestCourse !== detail.strongestCourse && (
+                                            <span className="badge badge-danger">⚠️ Weakest: {detail.weakestCourse}</span>
+                                        )}
+                                    </div>
+                                )}
+
+                                {courseBreakdownData.length > 0 && (
+                                    <div style={{ marginBottom: 24 }}>
+                                        <h4 style={{ marginBottom: 10 }}>Score by Enrolled Course</h4>
+                                        <div style={{ width: "100%", height: Math.max(140, courseBreakdownData.length * 42) }}>
+                                            <ResponsiveContainer width="100%" height="100%">
+                                                <BarChart data={courseBreakdownData} key={detail?.userID} layout="vertical" barCategoryGap="18%" barSize={20} margin={{ top: 4, right: 28, left: 8, bottom: 4 }}>
+                                                    <ScoreGradientDefs />
+                                                    <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" horizontal={false} />
+                                                    <XAxis type="number" domain={[0, 100]} tick={{ fontSize: 11, fill: INK_SOFT }} />
+                                                    <YAxis type="category" dataKey="name" width={100} tick={{ fontSize: 11, fill: INK_SOFT }} />
+                                                    <Tooltip content={<CustomTooltip />} labelFormatter={(_, p) => p?.[0]?.payload?.fullName} cursor={{ fill: "rgba(108,92,231,.06)" }} />
+                                                    <Bar dataKey="score" name="Average Score" radius={[0, 6, 6, 0]}
+                                                        isAnimationActive={!reducedMotion}
+                                                        animationBegin={150}
+                                                        animationDuration={1400}
+                                                        animationEasing="ease-out"
+                                                    >
+                                                        {courseBreakdownData.map((entry, i) => (
+                                                            <Cell key={i} fill={scoreFill(entry.score)} />
+                                                        ))}
+                                                        <LabelList dataKey="score" position="right" formatter={(v) => `${v}%`} style={{ fontSize: 11, fill: "var(--ink)" }} />
+                                                    </Bar>
+                                                </BarChart>
+                                            </ResponsiveContainer>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {skillTypeData.length > 0 && (
+                                    <div style={{ marginBottom: 24 }}>
+                                        <h4 style={{ marginBottom: 10 }}>By Question Type</h4>
+                                        <div style={{ width: "100%", height: 120 }}>
+                                            <ResponsiveContainer width="100%" height="100%">
+                                                <BarChart data={skillTypeData} key={detail?.userID} layout="vertical" barCategoryGap="20%" barSize={22} margin={{ top: 4, right: 28, left: 8, bottom: 4 }}>
+                                                    <ScoreGradientDefs />
+                                                    <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" horizontal={false} />
+                                                    <XAxis type="number" domain={[0, 100]} tick={{ fontSize: 11, fill: INK_SOFT }} />
+                                                    <YAxis type="category" dataKey="name" width={100} tick={{ fontSize: 11, fill: INK_SOFT }} />
+                                                    <Tooltip content={<CustomTooltip />} cursor={{ fill: "rgba(108,92,231,.06)" }} />
+                                                    <Bar dataKey="score" name="Score" radius={[0, 6, 6, 0]}
+                                                        isAnimationActive={!reducedMotion}
+                                                        animationBegin={150}
+                                                        animationDuration={1400}
+                                                        animationEasing="ease-out"
+                                                    >
+                                                        {skillTypeData.map((entry, i) => (
+                                                            <Cell key={i} fill={scoreFill(entry.score)} />
+                                                        ))}
+                                                        <LabelList dataKey="score" position="right" formatter={(v) => `${v}%`} style={{ fontSize: 11, fill: "var(--ink)" }} />
+                                                    </Bar>
+                                                </BarChart>
+                                            </ResponsiveContainer>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {detail.weakestExams.length > 0 && (
+                                    <>
+                                        <h4 style={{ margin: "22px 0 10px" }}>Lowest-Scoring Exams</h4>
+                                        {detail.weakestExams.map(e => (
+                                            <div key={`weak-${e.examID}`} style={{ display: "flex", justifyContent: "space-between", padding: "8px 0", borderBottom: "1px solid var(--border)" }}>
+                                                <span>{e.examTitle}</span>
+                                                <span className="badge badge-danger">{e.score}%</span>
+                                            </div>
+                                        ))}
+                                    </>
+                                )}
+
+                                {detail.strongestExams.length > 0 && (
+                                    <>
+                                        <h4 style={{ margin: "22px 0 10px" }}>Highest-Scoring Exams</h4>
+                                        {detail.strongestExams.map(e => (
+                                            <div key={`strong-${e.examID}`} style={{ display: "flex", justifyContent: "space-between", padding: "8px 0", borderBottom: "1px solid var(--border)" }}>
+                                                <span>{e.examTitle}</span>
+                                                <span className="badge badge-success">{e.score}%</span>
+                                            </div>
+                                        ))}
+                                    </>
+                                )}
+                            </>
+                        )}
+
+                        {/* ---- AI Report ---- */}
+                        {aiReportLoading && (
+                            <div className="ai-report-loading">
+                                <span className="spinner" /> Analyzing performance data...
+                            </div>
+                        )}
+
+                        {aiReport && !aiReportLoading && (
+                            <div className="ai-report">
+                                <div className="ai-report-header">
+                                    <span className="ai-report-icon">AI</span>
+                                    <div>
+                                        <h4 style={{ margin: 0, fontSize: 15 }}>AI Performance Report</h4>
+                                        <p style={{ margin: "2px 0 0", fontSize: 12, color: "var(--ink-soft)" }}>
+                                            {panelType === "trainer"
+                                                ? `Generated from ${detail.totalExams} exam submission(s) across ${detail.coursesCount} course(s)`
+                                                : `Generated from ${detail.examsTaken} exam(s) across ${detail.courseBreakdown?.length || 0} course(s)`}
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <div className={`ai-report-level ai-report-level--${aiReport.level}`}>
+                                    {aiReport.levelLabel}
+                                </div>
+
+                                <p className="ai-report-summary">{aiReport.summary}</p>
+
+                                {aiReport.sections.map((section, i) => (
+                                    <div
+                                        key={i}
+                                        className={`ai-report-section ${section.accent ? `ai-report-section--${section.accent}` : ""}`}
+                                    >
+                                        <div className="ai-report-section-title">
+                                            <span>{section.icon}</span> {section.title}
+                                        </div>
+                                        <p className="ai-report-section-text">{section.text}</p>
+
+                                        {section.metrics && (
+                                            <div className="ai-report-metrics">
+                                                {section.metrics.map((m, j) => (
+                                                    <div key={j} className="ai-report-metric">
+                                                        <span className="ai-report-metric-value" style={{ color: m.color }}>{m.value}</span>
+                                                        <span className="ai-report-metric-label">{m.label}</span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+
+                                        {section.items && (
+                                            <ul className="ai-report-list">
+                                                {section.items.map((item, j) => (
+                                                    <li key={j}>{item}</li>
+                                                ))}
+                                            </ul>
+                                        )}
                                     </div>
                                 ))}
-                            </>
+                            </div>
                         )}
                     </>
                 )}

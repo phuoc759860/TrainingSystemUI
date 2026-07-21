@@ -19,3 +19,9 @@ export const getQuestionInsights = async (examId = "", courseId = "") => {
 
 export const getExamRanking = async (courseId = "") =>
     await api.get(`/Statistics/exam-ranking${courseId ? `?courseId=${courseId}` : ""}`);
+
+export const getTrainers = async () =>
+    await api.get("/Statistics/trainers");
+
+export const getTrainerDetail = async (userId) =>
+    await api.get(`/Statistics/trainer/${userId}`);

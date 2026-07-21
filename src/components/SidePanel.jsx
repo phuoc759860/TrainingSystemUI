@@ -13,7 +13,9 @@ import { useEffect } from "react";
 //   >
 //       ...form fields...
 //   </SidePanel>
-function SidePanel({ open, title, subtitle, onClose, children, footer }) {
+//
+//   wide={true} — makes the panel wider (720px) for detailed content like reports
+function SidePanel({ open, title, subtitle, onClose, children, footer, wide }) {
 
     useEffect(() => {
         if (!open) return;
@@ -33,7 +35,7 @@ function SidePanel({ open, title, subtitle, onClose, children, footer }) {
     return (
         <div className="panel-backdrop" onMouseDown={onClose}>
             <div
-                className="panel"
+                className={`panel ${wide ? "panel--wide" : ""}`}
                 role="dialog"
                 aria-modal="true"
                 aria-labelledby="panel-title"

@@ -60,36 +60,45 @@ function GradeAttempt() {
     if (!attempt) {
         return (
             <div className="page">
-                <p>Loading attempt...</p>
+                <div className="loading-row">
+                    <span className="spinner" /> Loading attempt...
+                </div>
             </div>
         );
     }
 
     return (
         <div className="page">
+            <div className="welcome-banner">
+                <h2>Grade Attempt ✏️</h2>
+                <p>{attempt.examTitle} — {attempt.userName}</p>
+            </div>
+
             <div className="page-header">
                 <div>
-                    <h2 style={{ marginTop: 12 }}>{attempt.examTitle}</h2>
-                    <p style={{ color: "var(--ink-soft)", margin: "4px 0 0" }}>
-                        {attempt.userName} · Submitted {new Date(attempt.submittedAt).toLocaleString()}
+                    <h2 style={{ marginTop: 0 }}>Submission Details</h2>
+                    <p style={{ color: "var(--ink-soft)", margin: "4px 0 0", fontSize: 14 }}>
+                        Submitted {new Date(attempt.submittedAt).toLocaleString()}
                     </p>
                 </div>
             </div>
 
             <div className="stat-grid" style={{ marginBottom: 24 }}>
-                <div className="stat-card">
-                    <div className="num">{attempt.score}%</div>
-                    <div className="label">Current Score</div>
+                <div className="stat-card stat-card-purple">
+                    <div className="num" style={{ color: "#fff" }}>{attempt.score}%</div>
+                    <div className="label" style={{ color: "rgba(255,255,255,.9)" }}>Current Score</div>
                 </div>
-                <div className="stat-card">
-                    <span className={`badge ${attempt.passed ? "badge-success" : "badge-danger"}`} style={{ fontSize: 16 }}>
-                        {attempt.passed ? "Passed" : "Failed"}
+                <div className={`stat-card ${attempt.passed ? "stat-card-green" : "stat-card-coral"}`}>
+                    <span className="badge" style={{ fontSize: 16, background: "rgba(255,255,255,.2)", color: "#fff" }}>
+                        {attempt.passed ? "✓ Passed" : "✗ Failed"}
                     </span>
+                    <div className="label" style={{ color: "rgba(255,255,255,.9)" }}>Status</div>
                 </div>
-                <div className="stat-card">
-                    <span className={`badge ${attempt.needsGrading ? "badge-danger" : "badge-success"}`} style={{ fontSize: 16 }}>
-                        {attempt.needsGrading ? "Needs Grading" : "Fully Graded"}
+                <div className={`stat-card ${attempt.needsGrading ? "stat-card-yellow" : "stat-card-blue"}`}>
+                    <span className="badge" style={{ fontSize: 16, background: "rgba(255,255,255,.2)", color: "#fff" }}>
+                        {attempt.needsGrading ? "⏳ Needs Grading" : "✓ Fully Graded"}
                     </span>
+                    <div className="label" style={{ color: "rgba(255,255,255,.9)" }}>Grading</div>
                 </div>
             </div>
 
